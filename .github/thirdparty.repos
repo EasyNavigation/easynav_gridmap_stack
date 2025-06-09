@@ -1,0 +1,14 @@
+repositories:
+  ThirdParty/EasyNavigation:
+    type: git
+    url: https://github.com/EasyNavigation/EasyNavigation.git
+    version: rolling
+  ThirdParty/grid_map:
+    type: git
+    url: https://github.com/kiko2r/grid_map.git
+    version: grid_map_msgs
+  ThirdParty/navigation2:
+    type: git
+    url: https://github.com/kiko2r/navigation2.git
+    version: nav2_msgs
+    
