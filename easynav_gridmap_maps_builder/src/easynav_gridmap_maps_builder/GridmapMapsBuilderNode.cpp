@@ -40,7 +40,7 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
   cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
   if (!has_parameter("sensor_topic")) {
-    declare_parameter("sensor_topic", "map");
+    declare_parameter("sensor_topic", "points");
   }
 
   if (!has_parameter("downsample_resolution")) {
@@ -143,7 +143,7 @@ void GridmapMapsBuilderNode::cycle()
       processed_perceptions.downsample(downsample_resolution_);
     }
 
-    auto downsampled_points = processed_perceptions.as_points(0);
+    auto downsampled_points = processed_perceptions.as_points();
     if (downsampled_points.empty()) {
       return;
     }
