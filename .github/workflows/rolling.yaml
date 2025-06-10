@@ -35,7 +35,7 @@ jobs:
           colcon-defaults: |
             {
               "build": {
-                "packages-up-to": true
+                "packages-up-to": true,
                   "mixin": ["coverage-gcc"]
               }
             }
