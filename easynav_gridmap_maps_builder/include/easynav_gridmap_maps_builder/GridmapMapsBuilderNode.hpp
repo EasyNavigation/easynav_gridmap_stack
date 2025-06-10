@@ -1,3 +1,25 @@
+// Copyright 2025 Intelligent Robotics Lab
+//
+// This file is part of the project Easy Navigation (EasyNav in sh0rt)
+// licensed under the GNU General Public License v3.0.
+// See <http://www.gnu.org/licenses/> for details.
+//
+// Easy Navigation program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+/// \file
+/// \brief Definition of the GridmapMapsBuilderNode class.
+
 #ifndef EASYNAV_OUTDOOR_MAPS_BUILDER__GRIDMAPMAPSBUILDERNODE_HPP_
 #define EASYNAV_OUTDOOR_MAPS_BUILDER__GRIDMAPMAPSBUILDERNODE_HPP_
 
@@ -15,12 +37,11 @@ namespace easynav
 
 /**
  * @class GridmapMapsBuilderNode
- * @brief Lifecycle node that subscribes to point cloud sensor data and manages map building.
+ * @brief Lifecycle node that subscribes to point cloud sensor data and builds a grid map.
  *
- * This node handles perception data (point clouds) using multiple MapsBuilder instances
- * to generate outdoor maps. It supports ROS2 lifecycle management with clean startup,
- * activation, deactivation, and cleanup phases. The node also publishes processed maps
- * (e.g., filtered point clouds) for downstream consumption.
+ * This node processes perception data (point clouds) to generate a single outdoor grid map.
+ * It uses ROS 2 lifecycle management for clean startup, activation, deactivation, and cleanup.
+ * The node publishes the resulting grid map for downstream use.
  */
 class GridmapMapsBuilderNode : public rclcpp_lifecycle::LifecycleNode
 {
@@ -69,10 +90,10 @@ public:
   CallbackReturnT on_cleanup(const rclcpp_lifecycle::State & state) override;
 
   /**
-   * @brief Perform a processing cycle on the perception data and update maps.
+   * @brief Perform a processing cycle on the perception data and update the grid map.
    *
    * This method should be called periodically (e.g., in a timer or main loop) to process
-   * incoming sensor data, update the internal map representations, and publish outputs.
+   * incoming sensor data, update the internal grid map representation, and publish outputs.
    */
   void cycle();
 
@@ -92,7 +113,7 @@ private:
   /// Default frame ID used for perception data and published messages.
   std::string perception_default_frame_;
 
-  /// Publisher for processed gridmap map data.
+  /// Publisher for the processed grid map.
   rclcpp_lifecycle::LifecyclePublisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_;
 };
 
