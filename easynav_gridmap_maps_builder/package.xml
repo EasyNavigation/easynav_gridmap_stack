@@ -4,7 +4,7 @@
   <name>easynav_gridmap_maps_builder</name>
   <version>0.0.1</version>
   <description>Easy Navigation: Gridmap Map Builder Package.</description>
-  <maintainer email="e.aguado.glez@gmail.com">Esther Aguado Gonzalez</maintainer>
+  <maintainer email="francisco.romero@urjc.es">Francisco Jose Romero Ramirez</maintainer>
   <license>GPL-3.0-only</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

@@ -35,10 +35,10 @@ jobs:
           colcon-defaults: |
             {
               "build": {
-                "packages-up-to": true
+                "packages-up-to": true,
+                  "mixin": ["coverage-gcc"]
               }
             }
-          colcon-mixin-name: coverage-gcc
           colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml
 
       - name: Codecov
