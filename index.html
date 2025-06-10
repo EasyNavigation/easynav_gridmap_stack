@@ -88,6 +88,30 @@ $(function(){ initResizable(false); });
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p><a class="anchor" id="md_README"></a></p>
+<p>This stack is part of the Easy Navigation (EasyNav) project developed by the Intelligent Robotics Lab. It is composed of the <b>gridmap_maps_builder</b> package and the <b>gridmap_maps_manager</b> package (currently under construction) for handling elevation maps.</p>
+<h1><a class="anchor" id="autotoc_md1"></a>
+Installation</h1>
+<p>Clone the repository into your ROS 2 workspace: </p><div class="fragment"><div class="line">cd ~/ros2_ws/src</div>
+<div class="line">git clone https://github.com/EasyNavigation/easynav_gridmap_stack.git</div>
+<div class="line">cd ..</div>
+<div class="line">rosdep install --from-paths src --ignore-src -r -y</div>
+<div class="line">colcon build --packages-select easynav_gridmap_maps_builder</div>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md2"></a>
+Usage</h1>
+<p>Source your workspace: </p><div class="fragment"><div class="line">source ~/ros2_ws/install/setup.bash</div>
+</div><!-- fragment --><p> Run the lifecycle node: </p><div class="fragment"><div class="line">ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_node</div>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md3"></a>
+Parameters</h1>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Name   </th><th class="markdownTableHeadNone">Type   </th><th class="markdownTableHeadNone">Default Value   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>sensor_topic</code>   </td><td class="markdownTableBodyNone">string   </td><td class="markdownTableBodyNone"><code>"points"</code>   </td><td class="markdownTableBodyNone">Topic name to subscribe for point cloud data.    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>downsample_resolution</code>   </td><td class="markdownTableBodyNone">double   </td><td class="markdownTableBodyNone"><code>1.0</code>   </td><td class="markdownTableBodyNone">Resolution used for downsampling the point cloud.    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>perception_default_frame</code>   </td><td class="markdownTableBodyNone">string   </td><td class="markdownTableBodyNone"><code>"map"</code>   </td><td class="markdownTableBodyNone">Default frame ID for the output grid map.   </td></tr>
+</table>
 </div></div><!-- PageDoc -->
 <a href="doxygen_crawl.html"></a>
 </div><!-- contents -->
