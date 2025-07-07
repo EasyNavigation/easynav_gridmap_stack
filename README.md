@@ -24,7 +24,7 @@ source ~/ros2_ws/install/setup.bash
 ```
 Run the lifecycle node:
 ```bash
-ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_node
+ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_main
 ```
 
 ## Parameters
@@ -34,3 +34,25 @@ ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_node
 | `sensor_topic`           | string | `"points"`     | Topic name to subscribe for point cloud data. |
 | `downsample_resolution`  | double | `1.0`          | Resolution used for downsampling the point cloud. |
 | `perception_default_frame` | string | `"map"`      | Default frame ID for the output grid map. |
+
+## Test
+
+1. Create a parameter YAML file (e.g., `params.yaml`) with the following content:
+
+```yaml
+pointcloud_maps_builder_node:
+  ros__parameters:
+    use_sim_time: true
+    sensors: [map]
+    downsample_resolution: 0.1
+    perception_default_frame: map
+    map:
+      topic: map
+      type: sensor_msgs/msg/PointCloud2
+      group: points
+```
+
+2. Run the node using the parameter file with this command:
+```
+ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_main \
+--ros-args --params-file src/easynav_gridmap_stack/params.yaml

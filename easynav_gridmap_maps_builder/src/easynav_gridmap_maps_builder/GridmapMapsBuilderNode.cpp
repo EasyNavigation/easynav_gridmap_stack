@@ -29,7 +29,7 @@
 #include <grid_map_ros/grid_map_ros.hpp>
 
 #include "easynav_gridmap_maps_builder/GridmapMapsBuilderNode.hpp"
-#include "easynav_common/types/Perceptions.hpp"
+#include "easynav_common/types/PointPerception.hpp"
 
 namespace easynav
 {
@@ -39,12 +39,11 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
 {
   cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-  if (!has_parameter("sensor_topic")) {
-    declare_parameter("sensor_topic", "points");
-  }
-
   if (!has_parameter("downsample_resolution")) {
     declare_parameter("downsample_resolution", 1.0);
+  }
+  if (!has_parameter("sensors")) {
+    declare_parameter("sensors", std::vector<std::string>());
   }
 
   if (!has_parameter("perception_default_frame")) {
@@ -52,7 +51,9 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
   }
 
   pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
-        "map_builder/gridmap", rclcpp::QoS(1).transient_local().reliable());
+        "map_builder_gridmap/gridmap", rclcpp::QoS(1).transient_local().reliable());
+
+  register_handler(std::make_shared<PointPerceptionHandler>());
 }
 
 GridmapMapsBuilderNode::~GridmapMapsBuilderNode()
@@ -60,12 +61,12 @@ GridmapMapsBuilderNode::~GridmapMapsBuilderNode()
   if (get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
     trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVE_SHUTDOWN);
   }
-  if (get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
-    trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_INACTIVE_SHUTDOWN);
-  }
-  if (get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED) {
-    trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_UNCONFIGURED_SHUTDOWN);
-  }
+  // if (get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
+  //   trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_INACTIVE_SHUTDOWN);
+  // }
+  // if (get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED) {
+  //   trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_UNCONFIGURED_SHUTDOWN);
+  // }
 }
 
 using CallbackReturnT = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
@@ -75,22 +76,46 @@ GridmapMapsBuilderNode::on_configure(const rclcpp_lifecycle::State & state)
 {
   (void)state;
 
-  get_parameter("sensor_topic", sensor_topic_);
+  std::vector<std::string> sensors;
+  get_parameter("sensors", sensors);
   get_parameter("downsample_resolution", downsample_resolution_);
   get_parameter("perception_default_frame", perception_default_frame_);
 
-  auto perception_entry = std::make_shared<Perception>();
-  perception_entry->data.points.clear();
-  perception_entry->data.clear();
-  perception_entry->frame_id = "";
-  perception_entry->stamp = now();
-  perception_entry->valid = false;
-  perception_entry->new_data = true;
+  for (const auto & sensor_id : sensors) {
+    std::string topic, msg_type, group;
 
-  perceptions_.push_back(perception_entry);
+    if (!has_parameter(sensor_id + ".topic")) {
+      declare_parameter(sensor_id + ".topic", topic);
+    }
+    if (!has_parameter(sensor_id + ".type")) {
+      declare_parameter(sensor_id + ".type", msg_type);
+    }
+    if (!has_parameter(sensor_id + ".group")) {
+      declare_parameter(sensor_id + ".group", group);
+    }
 
-  perception_entry->subscription = create_typed_subscription<sensor_msgs::msg::PointCloud2>(
-        *this, sensor_topic_, perception_entry, cbg_);
+    get_parameter(sensor_id + ".topic", topic);
+    get_parameter(sensor_id + ".type", msg_type);
+    get_parameter(sensor_id + ".group", group);
+
+    RCLCPP_DEBUG(get_logger(),
+                  "Loaded sensor parameters: id=%s topic=%s type=%s group=%s",
+                  sensor_id.c_str(), topic.c_str(), msg_type.c_str(), group.c_str());
+
+    auto handler_it = handlers_.find(group);
+    if (handler_it == handlers_.end()) {
+      RCLCPP_WARN(get_logger(), "No handler for group [%s]", group.c_str());
+      continue;
+    }
+
+    auto ptr = handler_it->second->create(sensor_id);
+    auto sub = handler_it->second->create_subscription(*this, topic, msg_type, ptr, cbg_);
+
+    perceptions_[group].emplace_back(PerceptionPtr{ptr, sub});
+
+    RCLCPP_DEBUG(get_logger(), "Creating perception for sensor %s", sensor_id.c_str());
+    RCLCPP_DEBUG(get_logger(), "Handler group = %s", group.c_str());
+  }
 
   return CallbackReturnT::SUCCESS;
 }
@@ -125,23 +150,25 @@ GridmapMapsBuilderNode::on_cleanup(const rclcpp_lifecycle::State & state)
 void GridmapMapsBuilderNode::cycle()
 {
   // Finish cycle if no new perceptions
-  if (std::none_of(perceptions_.begin(), perceptions_.end(),
-    [](const auto & perception)
-    {return perception && perception->new_data;}))
+  if (std::none_of(perceptions_["points"].begin(), perceptions_["points"].end(),
+    [](const auto & p)
+    {return p.perception->new_data;}))
   {
     return;
   }
 
   if (pub_->get_subscription_count() > 0) {
-    auto processed_perceptions = PerceptionsOpsView(perceptions_);
+    auto point_perceptions = get_point_perceptions(perceptions_["points"]);
+    auto processed_perceptions = PointPerceptionsOpsView(point_perceptions);
     // Fuse perceptions if the frame_id is different from default and downsample
-    if (!perceptions_.empty() && perceptions_[0] &&
-      perceptions_[0]->frame_id != perception_default_frame_)
+    if (!point_perceptions.empty() && point_perceptions[0] &&
+      point_perceptions[0]->frame_id != perception_default_frame_)
     {
       processed_perceptions.downsample(downsample_resolution_).fuse(perception_default_frame_);
     } else {
       processed_perceptions.downsample(downsample_resolution_);
     }
+
 
     auto downsampled_points = processed_perceptions.as_points();
     if (downsampled_points.empty()) {
@@ -152,8 +179,8 @@ void GridmapMapsBuilderNode::cycle()
     grid_map::GridMap map({"elevation"});
     map.setFrameId(perception_default_frame_);
 
-    if (perceptions_[0]->stamp.nanoseconds() != 0) {
-      map.setTimestamp(perceptions_[0]->stamp.nanoseconds());
+    if (point_perceptions[0]->stamp.nanoseconds() != 0) {
+      map.setTimestamp(point_perceptions[0]->stamp.nanoseconds());
     } else {
       map.setTimestamp(now().nanoseconds());
     }
@@ -201,11 +228,18 @@ void GridmapMapsBuilderNode::cycle()
     pub_->publish(std::move(msg));
 
     // Mark perceptions as not new after published
-    for (auto & perception : perceptions_) {
-      if (perception->new_data) {
-        perception->new_data = false;
+    for (auto & p : perceptions_["points"]) {
+      if (p.perception->new_data) {
+        p.perception->new_data = false;
       }
     }
   }
 }
+
+void
+GridmapMapsBuilderNode::register_handler(std::shared_ptr<PerceptionHandler> handler)
+{
+  handlers_[handler->group()] = handler;
+}
+
 } // namespace easynav

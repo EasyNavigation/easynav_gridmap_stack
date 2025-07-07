@@ -97,12 +97,18 @@ public:
    */
   void cycle();
 
+  /**
+   * @brief Registers a perception handler.
+   * @param handler Shared pointer to a PerceptionHandler instance.
+   */
+  void register_handler(std::shared_ptr<PerceptionHandler> handler);
+
 private:
   /// Name of the sensor topic to subscribe to (e.g., point clouds).
   std::string sensor_topic_;
 
-  /// Collection of perception data managed by this node.
-  Perceptions perceptions_;
+  /// Map of perception data grouped by sensor name.
+  std::map<std::string, std::vector<PerceptionPtr>> perceptions_;
 
   /// Callback group for concurrency management of subscriptions and timers.
   rclcpp::CallbackGroup::SharedPtr cbg_;
@@ -115,6 +121,9 @@ private:
 
   /// Publisher for the processed grid map.
   rclcpp_lifecycle::LifecyclePublisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_;
+
+  /// Registered perception handlers by sensor name.
+  std::map<std::string, std::shared_ptr<PerceptionHandler>> handlers_;
 };
 
 }  // namespace easynav
