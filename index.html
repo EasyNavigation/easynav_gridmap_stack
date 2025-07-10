@@ -99,7 +99,7 @@ Installation</h1>
 </div><!-- fragment --><h1><a class="anchor" id="autotoc_md2"></a>
 Usage</h1>
 <p>Source your workspace: </p><div class="fragment"><div class="line">source ~/ros2_ws/install/setup.bash</div>
-</div><!-- fragment --><p> Run the lifecycle node: </p><div class="fragment"><div class="line">ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_node</div>
+</div><!-- fragment --><p> Run the lifecycle node: </p><div class="fragment"><div class="line">ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_main</div>
 </div><!-- fragment --><h1><a class="anchor" id="autotoc_md3"></a>
 Parameters</h1>
 <table class="markdownTable">
@@ -112,6 +112,24 @@ Parameters</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>perception_default_frame</code>   </td><td class="markdownTableBodyNone">string   </td><td class="markdownTableBodyNone"><code>"map"</code>   </td><td class="markdownTableBodyNone">Default frame ID for the output grid map.   </td></tr>
 </table>
+<h1><a class="anchor" id="autotoc_md4"></a>
+Test</h1>
+<ol type="1">
+<li>Create a parameter YAML file (e.g., <code>params.yaml</code>) with the following content:</li>
+</ol>
+<div class="fragment"><div class="line">pointcloud_maps_builder_node:</div>
+<div class="line">  ros__parameters:</div>
+<div class="line">    use_sim_time: true</div>
+<div class="line">    sensors: [map]</div>
+<div class="line">    downsample_resolution: 0.1</div>
+<div class="line">    perception_default_frame: map</div>
+<div class="line">    map:</div>
+<div class="line">      topic: map</div>
+<div class="line">      type: sensor_msgs/msg/PointCloud2</div>
+<div class="line">      group: points</div>
+</div><!-- fragment --><ol type="1">
+<li>Run the node using the parameter file with this command: ``` ros2 run easynav_gridmap_maps_builder gridmap_maps_builder_main \ &ndash;ros-args &ndash;params-file src/easynav_gridmap_stack/params.yaml </li>
+</ol>
 </div></div><!-- PageDoc -->
 <a href="doxygen_crawl.html"></a>
 </div><!-- contents -->
