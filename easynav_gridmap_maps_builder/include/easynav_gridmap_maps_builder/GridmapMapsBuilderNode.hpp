@@ -29,6 +29,9 @@
 
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "grid_map_msgs/msg/grid_map.hpp"
+#include "std_srvs/srv/trigger.hpp"
+
+#include "grid_map_ros/grid_map_ros.hpp"
 
 #include "easynav_common/types/Perceptions.hpp"
 
@@ -103,7 +106,15 @@ public:
    */
   void register_handler(std::shared_ptr<PerceptionHandler> handler);
 
+protected:
+  bool save_gridmap(const std::string & filename, const grid_map::GridMap & map);
+  bool load_gridmap(const std::string & filename, grid_map::GridMap & map);
+
+  grid_map::GridMap map_;
+  std::string map_path_;
+
 private:
+
   /// Name of the sensor topic to subscribe to (e.g., point clouds).
   std::string sensor_topic_;
 
@@ -121,6 +132,11 @@ private:
 
   /// Publisher for the processed grid map.
   rclcpp_lifecycle::LifecyclePublisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_;
+
+  /**
+   * @brief Service for saving current map to disk.
+   */
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr savemap_srv_;
 
   /// Registered perception handlers by sensor name.
   std::map<std::string, std::shared_ptr<PerceptionHandler>> handlers_;

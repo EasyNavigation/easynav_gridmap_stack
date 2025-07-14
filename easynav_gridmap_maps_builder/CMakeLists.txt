@@ -16,20 +16,27 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(easynav_common REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
 find_package(grid_map_msgs REQUIRED)
-
+find_package(ament_index_cpp REQUIRED)
+find_package(yaml_cpp_vendor REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 set(dependencies
   rclcpp
   rclcpp_lifecycle
   sensor_msgs
   std_msgs
+  std_srvs
   geometry_msgs
   easynav_common
   grid_map_ros
   grid_map_msgs
+  ament_index_cpp
+  yaml_cpp_vendor
+  cv_bridge
 )
 
 include_directories(include)

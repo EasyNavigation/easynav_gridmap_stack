@@ -23,13 +23,21 @@
 #include "rclcpp/macros.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
+#include "yaml-cpp/yaml.h"
+
 #include "lifecycle_msgs/msg/transition.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 
-#include <grid_map_ros/grid_map_ros.hpp>
+#include "grid_map_ros/grid_map_ros.hpp"
+#include "grid_map_cv/grid_map_cv.hpp"
+#include "cv_bridge/cv_bridge.hpp"
+#include "opencv2/highgui/highgui.hpp"
 
 #include "easynav_gridmap_maps_builder/GridmapMapsBuilderNode.hpp"
 #include "easynav_common/types/PointPerception.hpp"
+
+#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_prefix.hpp"
 
 namespace easynav
 {
@@ -50,9 +58,48 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
     declare_parameter("perception_default_frame", "map");
   }
 
+  std::string package_name, map_path_file;
+  if (!has_parameter("package")) {
+    declare_parameter("package", package_name);
+  }
+
+  if (!has_parameter("map_path_file")) {
+    declare_parameter("map_path_file", "map_path_file");
+  }
+
+//   if (package_name != "" && map_path_file != "") {
+//     std::string pkgpath;
+//     try {
+//       pkgpath = ament_index_cpp::get_package_share_directory(package_name);
+//       map_path_ = pkgpath + "/" + map_path_file;
+//     } catch(ament_index_cpp::PackageNotFoundError & ex) {
+//       return std::unexpected("Package " + package_name + " not found. Error: " + ex.what());
+//     }
+// 
+//     if (!load_gridmap(map_path_, map_)) {
+//       return std::unexpected("File [" + map_path_ + "] not found");
+//     }
+//   }
+
   pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
         "map_builder_gridmap/gridmap", rclcpp::QoS(1).transient_local().reliable());
 
+//   savemap_srv_ = node->create_service<std_srvs::srv::Trigger>(
+//     node->get_name() + std::string("/") + plugin_name + "/savemap",
+//     [this](
+//       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+//       std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+//     {
+//       (void)request;
+//       if (!save_gridmap(map_path_, map_)) {
+//         response->success = false;
+//         response->message = "Failed to save map to: " + map_path_;
+//       } else {
+//         response->success = true;
+//         response->message = "Map successfully saved to: " + map_path_;
+//       }
+//     });
+// 
   register_handler(std::make_shared<PointPerceptionHandler>());
 }
 
@@ -234,6 +281,85 @@ void
 GridmapMapsBuilderNode::register_handler(std::shared_ptr<PerceptionHandler> handler)
 {
   handlers_[handler->group()] = handler;
+}
+
+
+bool
+GridmapMapsBuilderNode::save_gridmap(const std::string & filename, const grid_map::GridMap & map)
+{
+  std::string dir = std::filesystem::path(filename).parent_path();
+  YAML::Emitter yaml;
+  yaml << YAML::BeginMap;
+  yaml << YAML::Key << "layers" << YAML::Value << YAML::BeginSeq;
+
+  for (const std::string & layer : map.getLayers()) {
+    // Compute min and max values of the layer
+    float min_val = std::numeric_limits<float>::max();
+    float max_val = std::numeric_limits<float>::lowest();
+    for (grid_map::GridMapIterator it(map); !it.isPastEnd(); ++it) {
+      if (!map.isValid(*it, layer)) continue;
+      float value = map.at(layer, *it);
+      min_val = std::min(min_val, value);
+      max_val = std::max(max_val, value);
+    }
+
+    // Save layer image
+    cv::Mat image;
+    grid_map::GridMapCvConverter::toImage<unsigned char, 1>(map, layer, CV_8UC1, min_val, max_val, image);
+    std::string image_filename = layer + ".pgm";
+    std::string image_path = dir + "/" + image_filename;
+    cv::imwrite(image_path, image);
+
+    yaml << YAML::BeginMap;
+    yaml << YAML::Key << "name" << YAML::Value << layer;
+    yaml << YAML::Key << "min" << YAML::Value << min_val;
+    yaml << YAML::Key << "max" << YAML::Value << max_val;
+    yaml << YAML::EndMap;
+  }
+  yaml << YAML::EndSeq;
+  yaml << YAML::Key << "resolution" << YAML::Value << map.getResolution();
+  yaml << YAML::Key << "length" << YAML::Value << YAML::Flow << std::vector<double>{map.getLength().x(), map.getLength().y()};
+  yaml << YAML::Key << "position" << YAML::Value << YAML::Flow << std::vector<double>{map.getPosition().x(), map.getPosition().y()};
+  yaml << YAML::EndMap;
+
+  std::ofstream file_out(filename);
+  if (!file_out) return false;
+  file_out << yaml.c_str();
+  return true;
+}
+
+bool
+GridmapMapsBuilderNode::load_gridmap(const std::string & filename, grid_map::GridMap & map)
+{
+  std::ifstream file_in(filename);
+  if (!file_in) return false;
+
+  YAML::Node config = YAML::LoadFile(filename);
+  if (!config["layers"]) return false;
+
+  map.setFrameId("map");
+
+  auto resolution = config["resolution"].as<double>();
+  auto length = config["length"].as<std::vector<double>>();
+  auto position = config["position"].as<std::vector<double>>();
+
+  map.setGeometry(grid_map::Length(length[0], length[1]), resolution, grid_map::Position(position[0], position[1]));
+
+  std::string dir = std::filesystem::path(filename).parent_path();
+
+  for (const auto & layer_node : config["layers"]) {
+    std::string layer_name = layer_node["name"].as<std::string>();
+    float min_val = layer_node["min"].as<float>();
+    float max_val = layer_node["max"].as<float>();
+
+    std::string image_path = dir + "/" + layer_name + ".pgm";
+    cv::Mat image = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
+    if (image.empty()) return false;
+
+    grid_map::GridMapCvConverter::addLayerFromImage<unsigned char, 1>(image, layer_name, map, min_val, max_val);
+  }
+
+  return true;
 }
 
 } // namespace easynav
