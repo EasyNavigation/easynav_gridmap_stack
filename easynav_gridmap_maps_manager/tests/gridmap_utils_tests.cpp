@@ -23,59 +23,23 @@
 #include "lifecycle_msgs/msg/transition.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 
-#include "easynav_gridmap_maps_builder/GridmapMapsBuilderNode.hpp"
+#include "easynav_gridmap_maps_manager/utils.hpp"
 
 class GridmapMapsLoadSaveTest : public ::testing::Test
 {
 protected:
   static void SetUpTestSuite()
   {
-    if (!rclcpp::ok()) {
-      rclcpp::init(0, nullptr);
-    }
   }
 
   static void TearDownTestSuite()
   {
-    rclcpp::shutdown();
   }
 };
 
-class TestGridmapMapsBuilderNode : public easynav::GridmapMapsBuilderNode
-{
-public:
-  explicit TestGridmapMapsBuilderNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions())
-  : GridmapMapsBuilderNode(options)
-  {
-
-  }
-
-  bool save_gridmap_test(const std::string & filename, const grid_map::GridMap & map)
-  {
-    return save_gridmap(filename, map);
-  }
-
-  bool load_gridmap_test(const std::string & filename, grid_map::GridMap & map)
-  {
-    return load_gridmap(filename, map);
-  }
-};
 
 TEST_F(GridmapMapsLoadSaveTest, test_configure_success)
 {
-  auto options = rclcpp::NodeOptions();
-
-  options.append_parameter_override("map_types", std::vector<std::string>{"pcl"});
-  options.append_parameter_override("sensor_topic", "points");
-
-  auto node = std::make_shared<TestGridmapMapsBuilderNode>(options);
-
-  node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
-  ASSERT_EQ(node->get_current_state().id(), lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE);
-
-  node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
-  ASSERT_EQ(node->get_current_state().id(), lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE);
-
   grid_map::GridMap map({"elevation", "occupancy"});
   map.setFrameId("map");
 
@@ -89,8 +53,8 @@ TEST_F(GridmapMapsLoadSaveTest, test_configure_success)
 
   for (double x = -4.0; x < 6.1; x = x + 1.0) {
     for (double y = -4.0; y < 6.1; y = y + 1.0) {
-      float elevation = y > 0.0? 0.0 : 1.0;
-      float occupancy = x > 0.0? 0.0 : 254.0;
+      float elevation = y > 0.0 ? 0.0 : 1.0;
+      float occupancy = x > 0.0 ? 0.0 : 254.0;
 
       grid_map::Position pos(x, y);
       grid_map::Index index;
@@ -104,7 +68,7 @@ TEST_F(GridmapMapsLoadSaveTest, test_configure_success)
   for (grid_map::GridMapIterator it(map); !it.isPastEnd(); ++it) {
     grid_map::Position position;
     map.getPosition(*it, position);
-    
+
     if (position.y() > 0) {
       ASSERT_NEAR(map.at("elevation", *it), 0.0, 0.00001);
     } else {
@@ -118,17 +82,17 @@ TEST_F(GridmapMapsLoadSaveTest, test_configure_success)
     }
   }
 
-  ASSERT_TRUE(node->save_gridmap_test("/tmp/test_1.yaml", map));
+  ASSERT_TRUE(easynav::save_gridmap("/tmp/test_1.yaml", map));
 
   grid_map::GridMap map2;
-  ASSERT_TRUE(node->load_gridmap_test("/tmp/test_1.yaml", map2));
+  ASSERT_TRUE(easynav::load_gridmap("/tmp/test_1.yaml", map2));
 
   ASSERT_EQ(map2.getLayers(), std::vector<std::string>({"elevation", "occupancy"}));
 
   for (grid_map::GridMapIterator it(map2); !it.isPastEnd(); ++it) {
     grid_map::Position position;
     map2.getPosition(*it, position);
-    
+
     if (position.y() > 0) {
       ASSERT_NEAR(map2.at("elevation", *it), 0.0, 0.00001);
     } else {

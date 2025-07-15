@@ -28,7 +28,7 @@
 
 #include "easynav_common/RTTFBuffer.hpp"
 
-#include "easynav_gridmap_maps_builder/GridmapMapsBuilderNode.hpp"
+#include "easynav_gridmap_maps_manager/GridmapMapsBuilderNode.hpp"
 
 int main(int argc, char **argv)
 {

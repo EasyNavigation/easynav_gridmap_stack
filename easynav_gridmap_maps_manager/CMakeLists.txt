@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(easynav_gridmap_maps_builder)
+project(easynav_gridmap_maps_manager)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -8,6 +8,8 @@ endif()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_BUILD_TYPE Debug)
 
 # Dependencies
 find_package(ament_cmake REQUIRED)
@@ -43,8 +45,8 @@ include_directories(include)
 
 # Library
 add_library(${PROJECT_NAME} SHARED
-  src/easynav_gridmap_maps_builder/GridmapMapsBuilderNode.cpp
-
+  src/easynav_gridmap_maps_manager/GridmapMapsBuilderNode.cpp
+  src/easynav_gridmap_maps_manager/utils.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} ${dependencies})
 

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>easynav_gridmap_maps_builder</name>
+  <name>easynav_gridmap_maps_manager</name>
   <version>0.0.1</version>
   <description>Easy Navigation: Gridmap Map Builder Package.</description>
   <maintainer email="francisco.romero@urjc.es">Francisco Jose Romero Ramirez</maintainer>
