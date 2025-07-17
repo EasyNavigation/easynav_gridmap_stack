@@ -59,22 +59,6 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
   pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
         "map_builder_gridmap/gridmap", rclcpp::QoS(1).transient_local().reliable());
 
-  savemap_srv_ = create_service<std_srvs::srv::Trigger>(
-    get_name() + std::string("/") + get_name() + "/savemap",
-    [this](
-      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response)
-    {
-      (void)request;
-      if (!save_gridmap("gridmap.yaml", this->map_)) {
-        response->success = false;
-        response->message = "Failed to save map_ to current directory";
-      } else {
-        response->success = true;
-        response->message = "Map successfully saved to current directory";
-      }
-    });
-
   register_handler(std::make_shared<PointPerceptionHandler>());
 }
 

@@ -158,4 +158,56 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
       }
     }
   }
+
+  auto client = test_node->create_client<std_srvs::srv::Trigger>(
+    "/gridmap_maps_builder_node/gridmap_maps_builder_node/savemap");
+  ASSERT_TRUE(client->wait_for_service(std::chrono::seconds(2)));
+
+  auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+
+  auto future = client->async_send_request(request);
+
+  if (rclcpp::spin_until_future_complete(test_node, future, 1s) !=
+    rclcpp::FutureReturnCode::SUCCESS)
+  {
+    std::cerr << "Spinnning" << std::endl;
+    executor.spin_some();
+  }
+
+  grid_map::GridMap map2;
+  ASSERT_TRUE(easynav::load_gridmap("gridmap.yaml", map2));
+
+  ASSERT_EQ(map2.getLayers(), std::vector<std::string>({"elevation"}));
+
+
+  {
+    sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
+    sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
+    sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
+
+    ASSERT_EQ(cloud.width, 10);
+    for (size_t i = 0; i < cloud.width; ++i, ++iter_x, ++iter_y, ++iter_z) {
+      grid_map::Position pos(*iter_x, *iter_y);
+      grid_map::Index index;
+      if (map2.getIndex(pos, index)) {
+        auto z = map2.at("elevation", index);
+
+        if (*iter_x < -5.0) {
+          EXPECT_NEAR(z, -2.0, 0.1);
+        } else if (*iter_x < 0) {
+          EXPECT_NEAR(z, -1.0, 0.1);
+        } else if (*iter_x < 5) {
+          EXPECT_NEAR(z, 1.0, 0.1);
+        } else {
+          EXPECT_NEAR(z, 2.0, 0.1);
+        }
+      }
+    }
+  }
+
+  ASSERT_EQ(map.getLength().x(), map2.getLength().x());
+  ASSERT_EQ(map.getLength().y(), map2.getLength().y());
+  ASSERT_EQ(map.getPosition().x(), map2.getPosition().x());
+  ASSERT_EQ(map.getPosition().y(), map2.getPosition().y());
+  ASSERT_EQ(map.getResolution(), map2.getResolution());
 }

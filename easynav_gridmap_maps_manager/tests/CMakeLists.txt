@@ -4,9 +4,8 @@ target_include_directories(gridmap_maps_builder_tests PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(gridmap_maps_builder_tests
-  ${PROJECT_NAME}
+  ${PROJECT_NAME}  ${dependencies}
 )
-ament_target_dependencies(gridmap_maps_builder_tests ${dependencies})
 
 ament_add_gtest(gridmap_utils_tests gridmap_utils_tests.cpp)
 target_include_directories(gridmap_utils_tests PUBLIC
@@ -14,6 +13,5 @@ target_include_directories(gridmap_utils_tests PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(gridmap_utils_tests
-  ${PROJECT_NAME}
+  ${PROJECT_NAME} ${dependencies}
 )
-ament_target_dependencies(gridmap_utils_tests ${dependencies})

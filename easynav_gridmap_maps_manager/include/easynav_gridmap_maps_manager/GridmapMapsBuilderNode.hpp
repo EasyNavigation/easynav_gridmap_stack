@@ -128,11 +128,6 @@ private:
   /// Publisher for the processed grid map.
   rclcpp_lifecycle::LifecyclePublisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_;
 
-  /**
-   * @brief Service for saving current map to disk.
-   */
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr savemap_srv_;
-
   /// Registered perception handlers by sensor name.
   std::map<std::string, std::shared_ptr<PerceptionHandler>> handlers_;
 
