@@ -57,7 +57,7 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
   }
 
   pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
-        "map_builder_gridmap/gridmap", rclcpp::QoS(1).transient_local().reliable());
+        "map_builder_gridmap/gridmap", 100);
 
   register_handler(std::make_shared<PointPerceptionHandler>());
 }

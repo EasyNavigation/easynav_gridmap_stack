@@ -29,9 +29,10 @@
 #include "lifecycle_msgs/msg/state.hpp"
 
 #include "easynav_gridmap_maps_manager/GridmapMapsBuilderNode.hpp"
+#include "easynav_gridmap_maps_manager/GridmapMapsManager.hpp"
 #include "easynav_gridmap_maps_manager/utils.hpp"
 
-class GridmapMapsBuilderTest : public ::testing::Test
+class GridmapMapsMangerTest : public ::testing::Test
 {
 protected:
   static void SetUpTestSuite()
@@ -49,8 +50,9 @@ protected:
 
 using namespace std::chrono_literals;
 
-TEST_F(GridmapMapsBuilderTest, test_configure_success)
+TEST_F(GridmapMapsMangerTest, test_save)
 {
+
   rclcpp::NodeOptions options;
   options.append_parameter_override("use_sim_time", true);
   options.append_parameter_override("sensors", std::vector<std::string>{"map"});
@@ -59,16 +61,48 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
   options.append_parameter_override("map.topic", "map");
   options.append_parameter_override("map.type", "sensor_msgs/msg/PointCloud2");
   options.append_parameter_override("map.group", "points");
+  std::vector<std::string> remappings = {
+    "/map_builder_gridmap/gridmap:=/test_node/test2/incoming_map"
+  };
+  options.arguments(remappings);
 
   auto builder_node = std::make_shared<easynav::GridmapMapsBuilderNode>(options);
-  auto test_node = std::make_shared<rclcpp::Node>("test_node");
+  auto test_node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("test_node");
+  auto manager = std::make_shared<easynav::GridmapMapsManager>();
+  manager->initialize(test_node, "test2");
+
   auto pub = test_node->create_publisher<sensor_msgs::msg::PointCloud2>("map", 10);
+
+  grid_map_msgs::msg::GridMap::SharedPtr received_gridmap;
+  auto sub = test_node->create_subscription<grid_map_msgs::msg::GridMap>(
+    "/test_node/test2/incoming_map", 100,
+    [&] (const grid_map_msgs::msg::GridMap::SharedPtr msg) {
+      received_gridmap = msg;
+    }
+  );
+
+  grid_map_msgs::msg::GridMap::SharedPtr emitted_gridmap;
+  auto sub2 = test_node->create_subscription<grid_map_msgs::msg::GridMap>(
+    "/test_node/test2/map", rclcpp::QoS(1).transient_local().reliable(),
+    [&] (const grid_map_msgs::msg::GridMap::SharedPtr msg) {
+      emitted_gridmap = msg;
+    }
+  );
+
+  easynav::NavState navstate;
 
   builder_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
   ASSERT_EQ(builder_node->get_current_state().id(),
     lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE);
   builder_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
   ASSERT_EQ(builder_node->get_current_state().id(),
+    lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE);
+
+  test_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
+  ASSERT_EQ(test_node->get_current_state().id(),
+    lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE);
+  test_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
+  ASSERT_EQ(test_node->get_current_state().id(),
     lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE);
 
   sensor_msgs::msg::PointCloud2 cloud;
@@ -122,12 +156,14 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
 
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(builder_node->get_node_base_interface());
+  executor.add_node(test_node->get_node_base_interface());
 
   auto start = test_node->now();
   while ((test_node->now() - start).seconds() < 1.0) {
     pub->publish(cloud);
     executor.spin_some();
     builder_node->cycle();
+    manager->update(navstate);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
 
@@ -159,55 +195,70 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
     }
   }
 
-  auto client = test_node->create_client<std_srvs::srv::Trigger>(
-    "/gridmap_maps_builder_node/gridmap_maps_builder_node/savemap");
-  ASSERT_TRUE(client->wait_for_service(std::chrono::seconds(2)));
+  ASSERT_NE(received_gridmap, nullptr);
+  grid_map::GridMap incoming;
+  ASSERT_TRUE(grid_map::GridMapRosConverter::fromMessage(*received_gridmap, incoming, {"elevation"}));
 
+  ASSERT_EQ(map.getLength().x(), incoming.getLength().x());
+  ASSERT_EQ(map.getLength().y(), incoming.getLength().y());
+  ASSERT_EQ(map.getPosition().x(), incoming.getPosition().x());
+  ASSERT_EQ(map.getPosition().y(), incoming.getPosition().y());
+  ASSERT_EQ(map.getResolution(), incoming.getResolution());
+
+  for (grid_map::GridMapIterator iterator(map); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index index(*iterator);
+    grid_map::Position pos;
+    map.getPosition(index, pos);
+
+    double map_z = map.at("elevation", index);
+
+    grid_map::Index index2;
+    ASSERT_TRUE(incoming.getIndex(pos, index2));
+
+    double incoming_z = incoming.at("elevation", index2);
+  
+    ASSERT_NEAR(map_z, incoming_z, 0.001);
+  }
+
+  ASSERT_EQ(received_gridmap->info, emitted_gridmap->info);
+  ASSERT_EQ(received_gridmap->layers, emitted_gridmap->layers);
+  ASSERT_EQ(received_gridmap->basic_layers, emitted_gridmap->basic_layers);
+  ASSERT_EQ(received_gridmap->data, emitted_gridmap->data);
+
+  auto test_node_srv = rclcpp::Node::make_shared("test_node_srv");
+  auto client = test_node_srv->create_client<std_srvs::srv::Trigger>("/test_node/test2/savemap");
   auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+  auto result_future = client->async_send_request(request);
 
-  auto future = client->async_send_request(request);
 
-  if (rclcpp::spin_until_future_complete(test_node, future, 1s) !=
-    rclcpp::FutureReturnCode::SUCCESS)
-  {
-    std::cerr << "Spinnning" << std::endl;
+  start = test_node->now();
+  while ((test_node->now() - start).seconds() < 1.0) {
+    pub->publish(cloud);
     executor.spin_some();
+    rclcpp::spin_until_future_complete(test_node_srv, result_future);
+    builder_node->cycle();
+    manager->update(navstate);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  auto result = result_future.get();
+
+  grid_map::GridMap map_file;
+  ASSERT_TRUE(easynav::load_gridmap("/tmp/gridmap_map.yaml", map_file));
+
+
+  for (grid_map::GridMapIterator iterator(map); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index index(*iterator);
+    grid_map::Position pos;
+    map.getPosition(index, pos);
+
+    double map_z = map.at("elevation", index);
+
+    grid_map::Index index2;
+    ASSERT_TRUE(map_file.getIndex(pos, index2));
+
+    double incoming_z = map_file.at("elevation", index2);
+  
+    ASSERT_NEAR(map_z, incoming_z, 0.05);
   }
 
-  grid_map::GridMap map2;
-  ASSERT_TRUE(easynav::load_gridmap("gridmap.yaml", map2));
-
-  ASSERT_EQ(map2.getLayers(), std::vector<std::string>({"elevation"}));
-
-
-  {
-    sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
-    sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
-    sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
-
-    ASSERT_EQ(cloud.width, 10);
-    for (size_t i = 0; i < cloud.width; ++i, ++iter_x, ++iter_y, ++iter_z) {
-      grid_map::Position pos(*iter_x, *iter_y);
-      grid_map::Index index;
-      if (map2.getIndex(pos, index)) {
-        auto z = map2.at("elevation", index);
-
-        if (*iter_x < -5.0) {
-          EXPECT_NEAR(z, -2.0, 0.1);
-        } else if (*iter_x < 0) {
-          EXPECT_NEAR(z, -1.0, 0.1);
-        } else if (*iter_x < 5) {
-          EXPECT_NEAR(z, 1.0, 0.1);
-        } else {
-          EXPECT_NEAR(z, 2.0, 0.1);
-        }
-      }
-    }
-  }
-
-  ASSERT_EQ(map.getLength().x(), map2.getLength().x());
-  ASSERT_EQ(map.getLength().y(), map2.getLength().y());
-  ASSERT_EQ(map.getPosition().x(), map2.getPosition().x());
-  ASSERT_EQ(map.getPosition().y(), map2.getPosition().y());
-  ASSERT_EQ(map.getResolution(), map2.getResolution());
 }

@@ -67,6 +67,8 @@ GridmapMapsManager::on_initialize()
   node->get_parameter(plugin_name + ".package", package_name);
   node->get_parameter(plugin_name + ".map_path_file", map_path_file);
 
+  map_path_ = "/tmp/gridmap_map.yaml";
+
   if (package_name != "" && map_path_file != "") {
     std::string pkgpath;
     try {
@@ -87,7 +89,7 @@ GridmapMapsManager::on_initialize()
 
   incoming_map_sub_ = node->create_subscription<grid_map_msgs::msg::GridMap>(
     node->get_name() + std::string("/") + plugin_name + "/incoming_map",
-    rclcpp::QoS(1).transient_local().reliable(),
+    100,
     [this](grid_map_msgs::msg::GridMap::UniquePtr msg) {
       grid_map::GridMap incoming;
       if (grid_map::GridMapRosConverter::fromMessage(*msg, incoming, {"elevation"})) {
@@ -130,7 +132,7 @@ GridmapMapsManager::update(NavState & nav_state)
   EASYNAV_TRACE_EVENT;
 
   if (map_need_update_) {
-    nav_state.set("map", map_);
+    nav_state.set("map.elevation", map_);
     map_need_update_ = false;
   }
 }

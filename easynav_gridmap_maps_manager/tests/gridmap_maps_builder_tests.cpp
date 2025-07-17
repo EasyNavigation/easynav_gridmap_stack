@@ -50,8 +50,7 @@ protected:
 using namespace std::chrono_literals;
 
 TEST_F(GridmapMapsBuilderTest, test_configure_success)
-{
-  rclcpp::NodeOptions options;
+{  rclcpp::NodeOptions options;
   options.append_parameter_override("use_sim_time", true);
   options.append_parameter_override("sensors", std::vector<std::string>{"map"});
   options.append_parameter_override("downsample_resolution", 1.0);
@@ -63,6 +62,15 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
   auto builder_node = std::make_shared<easynav::GridmapMapsBuilderNode>(options);
   auto test_node = std::make_shared<rclcpp::Node>("test_node");
   auto pub = test_node->create_publisher<sensor_msgs::msg::PointCloud2>("map", 10);
+
+  grid_map_msgs::msg::GridMap::SharedPtr received_gridmap;
+  auto sub = test_node->create_subscription<grid_map_msgs::msg::GridMap>(
+    "/map_builder_gridmap/gridmap", 100,
+    [&] (const grid_map_msgs::msg::GridMap::SharedPtr msg) {
+      received_gridmap = msg;
+    }
+  );
+
 
   builder_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
   ASSERT_EQ(builder_node->get_current_state().id(),
@@ -122,6 +130,7 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
 
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(builder_node->get_node_base_interface());
+  executor.add_node(test_node);
 
   auto start = test_node->now();
   while ((test_node->now() - start).seconds() < 1.0) {
@@ -158,4 +167,30 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
       }
     }
   }
+
+  ASSERT_NE(received_gridmap, nullptr);
+  grid_map::GridMap incoming;
+  ASSERT_TRUE(grid_map::GridMapRosConverter::fromMessage(*received_gridmap, incoming, {"elevation"}));
+
+  ASSERT_EQ(map.getLength().x(), incoming.getLength().x());
+  ASSERT_EQ(map.getLength().y(), incoming.getLength().y());
+  ASSERT_EQ(map.getPosition().x(), incoming.getPosition().x());
+  ASSERT_EQ(map.getPosition().y(), incoming.getPosition().y());
+  ASSERT_EQ(map.getResolution(), incoming.getResolution());
+
+  for (grid_map::GridMapIterator iterator(map); !iterator.isPastEnd(); ++iterator) {
+    const grid_map::Index index(*iterator);
+    grid_map::Position pos;
+    map.getPosition(index, pos);
+
+    double map_z = map.at("elevation", index);
+
+    grid_map::Index index2;
+    ASSERT_TRUE(incoming.getIndex(pos, index2));
+
+    double incoming_z = incoming.at("elevation", index2);
+  
+    ASSERT_NEAR(map_z, incoming_z, 0.001);
+  }
+
 }
