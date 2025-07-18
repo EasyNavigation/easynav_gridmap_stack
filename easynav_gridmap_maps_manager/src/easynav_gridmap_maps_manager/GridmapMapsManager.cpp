@@ -81,6 +81,9 @@ GridmapMapsManager::on_initialize()
     if (!load_gridmap(map_path_, map_)) {
       return std::unexpected("File [" + map_path_ + "] not found or read error");
     }
+
+    RCLCPP_INFO(node->get_logger(), "Loaded gridmap from [%s] size = (%lf, %lf) \tresolution = %lf",
+      map_path_.c_str(), map_.getLength().x(), map_.getLength().y(), map_.getResolution());
   }
 
   gridmap_pub_ = node->create_publisher<grid_map_msgs::msg::GridMap>(
@@ -134,6 +137,10 @@ GridmapMapsManager::update(NavState & nav_state)
   if (map_need_update_) {
     nav_state.set("map.elevation", map_);
     map_need_update_ = false;
+
+    gridmap_msg_ = *grid_map::GridMapRosConverter::toMessage(map_);
+    gridmap_msg_.header.stamp = this->get_node()->now();
+    gridmap_pub_->publish(gridmap_msg_);
   }
 }
 
