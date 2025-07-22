@@ -1,0 +1,9 @@
+<class_libraries>
+  <library path="easynav_gridmap_maps_manager">
+    <class name="easynav_gridmap_maps_manager/GridmapMapsManager"  type="easynav::GridmapMapsManager" base_class_type="easynav::MapsManagerBase">
+      <description>
+      A gridmap implementation for the Maps Manager.
+      </description>
+    </class>
+  </library>
+</class_libraries>

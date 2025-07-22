@@ -216,7 +216,6 @@ TEST_F(GridmapMapsMangerTest, test_save)
     ASSERT_TRUE(incoming.getIndex(pos, index2));
 
     double incoming_z = incoming.at("elevation", index2);
-
     ASSERT_NEAR(map_z, incoming_z, 0.001);
   }
 

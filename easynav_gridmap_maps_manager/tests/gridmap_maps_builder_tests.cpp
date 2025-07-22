@@ -194,5 +194,4 @@ TEST_F(GridmapMapsBuilderTest, test_configure_success)
 
     ASSERT_NEAR(map_z, incoming_z, 0.001);
   }
-
 }

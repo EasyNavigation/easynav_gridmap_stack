@@ -122,5 +122,4 @@ bool load_gridmap(const std::string & filename, grid_map::GridMap & map)
 
   return true;
 }
-
 }  // namespace easynav
