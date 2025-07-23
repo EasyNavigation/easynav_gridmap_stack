@@ -5,8 +5,8 @@ repositories:
     version: rolling
   ThirdParty/grid_map:
     type: git
-    url: https://github.com/kiko2r/grid_map.git
-    version: grid_map_msgs
+    url: https://github.com/fmrico/grid_map.git
+    version: rolling_ament_fixed
   ThirdParty/navigation2:
     type: git
     url: https://github.com/kiko2r/navigation2.git
