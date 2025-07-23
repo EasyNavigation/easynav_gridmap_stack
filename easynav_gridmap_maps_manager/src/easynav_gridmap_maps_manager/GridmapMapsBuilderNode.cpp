@@ -26,16 +26,22 @@
 #include "lifecycle_msgs/msg/transition.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 
-#include <grid_map_ros/grid_map_ros.hpp>
+#include "grid_map_ros/grid_map_ros.hpp"
 
-#include "easynav_gridmap_maps_builder/GridmapMapsBuilderNode.hpp"
+#include "easynav_gridmap_maps_manager/GridmapMapsBuilderNode.hpp"
+#include "easynav_gridmap_maps_manager/utils.hpp"
 #include "easynav_common/types/PointPerception.hpp"
+#include "easynav_common/types/Perceptions.hpp"
+
+#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_prefix.hpp"
 
 namespace easynav
 {
 
 GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & options)
-: rclcpp_lifecycle::LifecycleNode("gridmap_maps_builder_node", options)
+: rclcpp_lifecycle::LifecycleNode("gridmap_maps_builder_node", options),
+  map_({"elevation"})
 {
   cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
@@ -47,11 +53,11 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
   }
 
   if (!has_parameter("perception_default_frame")) {
-    declare_parameter("perception_default_frame", "map");
+    declare_parameter("perception_default_frame", "map_");
   }
 
   pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
-        "map_builder_gridmap/gridmap", rclcpp::QoS(1).transient_local().reliable());
+        "map_builder_gridmap/gridmap", 100);
 
   register_handler(std::make_shared<PointPerceptionHandler>());
 }
@@ -143,82 +149,56 @@ GridmapMapsBuilderNode::on_cleanup(const rclcpp_lifecycle::State & state)
 
 void GridmapMapsBuilderNode::cycle()
 {
-  // Finish cycle if no new perceptions
-  if (std::none_of(perceptions_["points"].begin(), perceptions_["points"].end(),
-    [](const auto & p)
-    {return p.perception->new_data;}))
-  {
+  auto point_perceptions = get_point_perceptions(perceptions_["points"]);
+  auto points = PointPerceptionsOpsView(point_perceptions).as_points();
+  auto downsampled_points = PointPerceptionsOpsView(point_perceptions)
+    .downsample(downsample_resolution_)
+    .fuse(perception_default_frame_)
+    ->as_points();
+
+  if (downsampled_points.empty()) {
     return;
   }
 
-  if (pub_->get_subscription_count() > 0) {
-    auto point_perceptions = get_point_perceptions(perceptions_["points"]);
-    auto processed_perceptions = PointPerceptionsOpsView(point_perceptions);
-    // Fuse perceptions if the frame_id is different from default and downsample
-    if (!point_perceptions.empty() && point_perceptions[0] &&
-      point_perceptions[0]->frame_id != perception_default_frame_)
-    {
-      processed_perceptions.downsample(downsample_resolution_).fuse(perception_default_frame_);
-    } else {
-      processed_perceptions.downsample(downsample_resolution_);
+  map_.setFrameId(perception_default_frame_);
+  map_.setTimestamp(point_perceptions[0]->stamp.nanoseconds());
+
+  float min_x = std::numeric_limits<float>::max(), max_x = std::numeric_limits<float>::min();
+  float min_y = std::numeric_limits<float>::max(), max_y = std::numeric_limits<float>::min();
+
+  for (const auto & pt : downsampled_points.points) {
+    if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || !std::isfinite(pt.z)) {
+      continue;
     }
 
+    min_x = std::min(min_x, pt.x);
+    max_x = std::max(max_x, pt.x);
+    min_y = std::min(min_y, pt.y);
+    max_y = std::max(max_y, pt.y);
+  }
 
-    auto downsampled_points = processed_perceptions.as_points();
-    if (downsampled_points.empty()) {
-      return;
-    }
+  float resolution = 1;
+  float length_x = max_x - min_x;
+  float length_y = max_y - min_y;
+  float center_x = (max_x + min_x) / 2.0;
+  float center_y = (max_y + min_y) / 2.0;
 
-
-    grid_map::GridMap map({"elevation"});
-    map.setFrameId(perception_default_frame_);
-
-    if (point_perceptions[0]->stamp.nanoseconds() != 0) {
-      map.setTimestamp(point_perceptions[0]->stamp.nanoseconds());
-    } else {
-      map.setTimestamp(now().nanoseconds());
-    }
-
-      // Get Geometry from PCL Cloud
-    float min_x = std::numeric_limits<float>::max(), max_x = std::numeric_limits<float>::min();
-    float min_y = std::numeric_limits<float>::max(), max_y = std::numeric_limits<float>::min();
-
-    for (const auto & pt : downsampled_points.points) {
-      if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || !std::isfinite(pt.z)) {
-        continue;
-      }
-
-      min_x = std::min(min_x, pt.x);
-      max_x = std::max(max_x, pt.x);
-      min_y = std::min(min_y, pt.y);
-      max_y = std::max(max_y, pt.y);
-    }
-
-    float resolution = 1;
-    float length_x = max_x - min_x;
-    float length_y = max_y - min_y;
-    float center_x = (max_x + min_x) / 2.0;
-    float center_y = (max_y + min_y) / 2.0;
-
-    map.setGeometry(grid_map::Length(length_x, length_y), resolution,
+  map_.setGeometry(grid_map::Length(length_x, length_y), resolution,
                       grid_map::Position(center_x, center_y));
-    map["elevation"].setConstant(0.0);   // Initialize elevations of all cells to zero
+  map_["elevation"].setConstant(0.0);
 
-      // Set elevation
-    for (const auto & pt : downsampled_points.points) {
-      grid_map::Position pos(pt.x, pt.y);
-      grid_map::Index index;
-      if (map.getIndex(pos, index)) {
-        float & cell = map.at("elevation", index);
-        if (std::isnan(cell)) {
-          cell = pt.z;
-        } else {
-          cell = (cell + pt.z) / 2.0;
-        }
-      }
+  // Set elevation
+  for (const auto & pt : downsampled_points.points) {
+    grid_map::Position pos(pt.x, pt.y);
+    grid_map::Index index;
+    if (map_.getIndex(pos, index)) {
+      float & cell = map_.at("elevation", index);
+      cell = pt.z;
     }
+  }
 
-    auto msg = grid_map::GridMapRosConverter::toMessage(map);
+  if (pub_->get_subscription_count() > 0) {
+    auto msg = grid_map::GridMapRosConverter::toMessage(map_);
     pub_->publish(std::move(msg));
 
     // Mark perceptions as not new after published
@@ -235,5 +215,6 @@ GridmapMapsBuilderNode::register_handler(std::shared_ptr<PerceptionHandler> hand
 {
   handlers_[handler->group()] = handler;
 }
+
 
 } // namespace easynav

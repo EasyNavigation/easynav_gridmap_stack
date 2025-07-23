@@ -20,8 +20,8 @@
 /// \file
 /// \brief Definition of the GridmapMapsBuilderNode class.
 
-#ifndef EASYNAV_OUTDOOR_MAPS_BUILDER__GRIDMAPMAPSBUILDERNODE_HPP_
-#define EASYNAV_OUTDOOR_MAPS_BUILDER__GRIDMAPMAPSBUILDERNODE_HPP_
+#ifndef EASYNAV_GRIDMAP_MAPS_MANAGER__GRIDMAPMAPSBUILDERNODE_HPP_
+#define EASYNAV_GRIDMAP_MAPS_MANAGER__GRIDMAPMAPSBUILDERNODE_HPP_
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/macros.hpp"
@@ -29,6 +29,9 @@
 
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "grid_map_msgs/msg/grid_map.hpp"
+#include "std_srvs/srv/trigger.hpp"
+
+#include "grid_map_ros/grid_map_ros.hpp"
 
 #include "easynav_common/types/Perceptions.hpp"
 
@@ -103,6 +106,9 @@ public:
    */
   void register_handler(std::shared_ptr<PerceptionHandler> handler);
 
+  const grid_map::GridMap & get_map() const {return map_;}
+  void set_map(const grid_map::GridMap & map) {map_ = map;}
+
 private:
   /// Name of the sensor topic to subscribe to (e.g., point clouds).
   std::string sensor_topic_;
@@ -124,8 +130,10 @@ private:
 
   /// Registered perception handlers by sensor name.
   std::map<std::string, std::shared_ptr<PerceptionHandler>> handlers_;
+
+  grid_map::GridMap map_;
 };
 
 }  // namespace easynav
 
-#endif  // EASYNAV_OUTDOOR_MAPS_BUILDER__GRIDMAPMAPSBUILDERNODE_HPP_
+#endif  // EASYNAV_GRIDMAP_MAPS_MANAGER__GRIDMAPMAPSBUILDERNODE_HPP_
