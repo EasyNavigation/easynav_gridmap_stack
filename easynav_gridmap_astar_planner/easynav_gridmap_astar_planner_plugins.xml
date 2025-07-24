@@ -1,0 +1,9 @@
+<class_libraries>
+  <library path="easynav_gridmap_astar_planner">
+    <class name="easynav_gridmap_astar_planner/GridMapAStarPlanner"  type="easynav::GridMapAStarPlanner" base_class_type="easynav::PlannerMethodBase">
+      <description>
+      A default "simple" implementation for the A* path planner.
+      </description>
+    </class>
+  </library>
+</class_libraries>
