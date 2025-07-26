@@ -1,0 +1,19 @@
+<map id="easynav_gridmap_maps_manager/tests/gridmap_utils_tests.cpp" name="easynav_gridmap_maps_manager/tests/gridmap_utils_tests.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="353,5,514,61"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,116,99,142"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="353,54,238,79,111,112,103,114,101,109,110,106,237,74,352,49"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="123,116,242,142"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="362,64,230,113,228,108,360,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="266,109,427,150"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="410,63,377,100,373,96,406,60"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="452,109,588,150"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="460,60,494,96,490,100,456,63"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="612,109,748,150"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="506,59,615,101,613,106,504,64"/>
+<area shape="rect" id="Node000007" href="$utils_8hpp.html" title="Definition of the GridmapMapsBuilderNode class." alt="" coords="773,109,934,150"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="515,50,758,104,757,109,514,55"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="676,198,844,238"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="834,152,794,189,790,185,830,148"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="867,198,1024,238"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="876,148,915,185,912,189,872,152"/>
+</map>

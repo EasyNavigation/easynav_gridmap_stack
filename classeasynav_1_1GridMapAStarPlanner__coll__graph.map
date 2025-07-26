@@ -1,0 +1,11 @@
+<map id="GridMapAStarPlanner" name="GridMapAStarPlanner">
+<area shape="rect" id="Node000001" title="Planner based on A* algorithm using GridMap elevation data." alt="" coords="196,154,343,180"/>
+<area shape="rect" id="Node000002" href="$classPlannerMethodBase.html" title=" " alt="" coords="5,5,144,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="95,42,133,85,183,128,230,151,228,156,180,132,129,89,91,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="168,5,227,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="193,47,189,88,192,109,200,129,212,142,228,151,225,156,209,146,196,131,187,110,184,88,187,46"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="318,5,367,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="343,47,334,88,315,132,291,155,287,152,311,128,329,87,337,46"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="416,5,496,31"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="459,47,452,90,443,113,428,132,414,141,394,148,344,159,343,154,393,143,412,136,425,128,438,110,447,89,453,46"/>
+</map>

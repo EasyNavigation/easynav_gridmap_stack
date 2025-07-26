@@ -1,0 +1,13 @@
+<map id="easynav_gridmap_maps_manager/include/easynav_gridmap_maps_manager/GridmapMapsManager.hpp" name="easynav_gridmap_maps_manager/include/easynav_gridmap_maps_manager/GridmapMapsManager.hpp">
+<area shape="rect" id="Node000001" title="Definition of the GridmapManagerNode class." alt="" coords="329,5,585,76"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,124,173,165"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="332,79,176,122,174,117,330,74"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="197,132,354,157"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="396,79,312,126,309,121,394,74"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="379,124,535,165"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="460,76,460,108,454,108,454,76"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="559,124,747,165"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="525,74,603,114,600,119,523,79"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="771,132,890,157"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="586,74,772,124,770,130,584,79"/>
+</map>

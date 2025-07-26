@@ -1,0 +1,5 @@
+<map id="GridmapMapsBuilderNode" name="GridmapMapsBuilderNode">
+<area shape="rect" id="Node000001" title="Lifecycle node that subscribes to point cloud sensor data and builds a grid map." alt="" coords="5,79,179,105"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="40,5,144,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="95,46,95,79,89,79,89,46"/>
+</map>

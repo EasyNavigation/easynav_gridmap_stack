@@ -1,0 +1,7 @@
+<map id="GridmapMapsManager" name="GridmapMapsManager">
+<area shape="rect" id="Node000001" title="A plugin&#45;based map manager using Gridmaps." alt="" coords="54,94,207,120"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,139,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="91,42,125,92,120,95,86,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="163,5,216,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="175,45,141,95,137,92,171,42"/>
+</map>
