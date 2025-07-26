@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Generate Doxygen for EasyNav Costmap Stack
+      - name: Generate Doxygen for EasyNav Gridmap Stack
         uses: mattnotmitt/doxygen-action@edge
         with:
           doxyfile-path: ".github/Doxyfile"
