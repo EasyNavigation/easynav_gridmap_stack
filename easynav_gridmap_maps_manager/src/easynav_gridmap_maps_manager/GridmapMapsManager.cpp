@@ -89,11 +89,11 @@ GridmapMapsManager::on_initialize()
   }
 
   gridmap_pub_ = node->create_publisher<grid_map_msgs::msg::GridMap>(
-    node->get_name() + std::string("/") + plugin_name + "/map",
+    node->get_fully_qualified_name() + std::string("/") + plugin_name + "/map",
     rclcpp::QoS(1).transient_local().reliable());
 
   incoming_map_sub_ = node->create_subscription<grid_map_msgs::msg::GridMap>(
-    node->get_name() + std::string("/") + plugin_name + "/incoming_map",
+    node->get_fully_qualified_name() + std::string("/") + plugin_name + "/incoming_map",
     100,
     [this](grid_map_msgs::msg::GridMap::UniquePtr msg) {
       grid_map::GridMap incoming;
@@ -109,7 +109,7 @@ GridmapMapsManager::on_initialize()
     });
 
   savemap_srv_ = node->create_service<std_srvs::srv::Trigger>(
-    node->get_name() + std::string("/") + plugin_name + "/savemap",
+    node->get_fully_qualified_name() + std::string("/") + plugin_name + "/savemap",
     [this](
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response)
