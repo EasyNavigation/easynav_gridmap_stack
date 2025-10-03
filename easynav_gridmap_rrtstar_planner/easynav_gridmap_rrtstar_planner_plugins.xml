@@ -1,0 +1,9 @@
+<class_libraries>
+  <library path="easynav_gridmap_rrtstar_planner">
+    <class name="easynav_gridmap_rrtstar_planner/GridMapRRTStarPlanner"  type="easynav::GridMapRRTStarPlanner" base_class_type="easynav::PlannerMethodBase">
+      <description>
+      A implementation for the RRT* path planner.
+      </description>
+    </class>
+  </library>
+</class_libraries>
