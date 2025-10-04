@@ -102,7 +102,7 @@ std::expected<void, std::string> GridMapRRTStarPlanner::on_initialize()
   node->get_parameter(plugin_name + ".spacing", spacing_);
   node->get_parameter(plugin_name + ".max_lateral_deviation", max_lateral_deviation_);
   node->get_parameter(plugin_name + ".final_poses_with_goal_orientation",
-      final_poses_with_goal_orientation_);
+                        final_poses_with_goal_orientation_);
 
   max_allowed_slope_ = max_allowed_slope_deg_ * M_PI / 180.0;
 
@@ -196,7 +196,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
   const int min_iterations = max_iters_ / 2;
 
   for (int iter = 0; iter < max_iters_; ++iter) {
-        // adaptive goal bias: increase bias if a candidate path exists, else grow modestly
+      // adaptive goal bias: increase bias if a candidate path exists, else grow modestly
     double adaptive_goal_bias = goal_bias_;
 
     if (best_goal_node) {
@@ -209,7 +209,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
     if (prob_dist(rng) < adaptive_goal_bias) {
       rand_idx = goal_idx;
     } else {
-            // early iterations: bias samples forward relative to robot heading, otherwise sample uniformly
+        // early iterations: bias samples forward relative to robot heading, otherwise sample uniformly
       if (iter < 100 && tree.size() < 50) {
         rand_idx = biased_random_index(map, start, robot_yaw, rng);
       } else {
@@ -227,7 +227,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
       continue;
     }
 
-        // skip exact duplicates and very close nodes when tree is large
+      // skip exact duplicates and very close nodes when tree is large
     bool duplicate = false;
     for (const auto & node : tree) {
       if ((node->index == new_idx).all()) {
@@ -239,9 +239,11 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
         break;
       }
     }
-    if (duplicate) {continue;}
+    if (duplicate) {
+      continue;
+    }
 
-        // compute full traversal cost for the new edge and skip infeasible edges
+      // compute full traversal cost for the new edge and skip infeasible edges
     double edge_cost = traversal_cost(map, nearest->index, new_idx);
     if (!std::isfinite(edge_cost)) {
       continue;
@@ -252,11 +254,11 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
     new_node->cost = nearest->cost + edge_cost;
     new_node->parent = nearest;
 
-        // collect nearby nodes for potential rewiring using a dynamic radius
+      // collect nearby nodes for potential rewiring using a dynamic radius
     std::vector<std::shared_ptr<RRTNode>> nearby_nodes;
     double search_radius = std::min(neighbor_radius_,
-                                       neighbor_radius_ *
-        std::sqrt(std::log(tree.size()) / tree.size()));
+                                      neighbor_radius_ *
+                                          std::sqrt(std::log(tree.size()) / tree.size()));
 
     for (const auto & near_node : tree) {
       double dist = distance(map, near_node->index, new_idx);
@@ -265,16 +267,17 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
       }
     }
 
-        // limit number of neighbors considered, keeping closest ones
+      // limit number of neighbors considered, keeping closest ones
     if (nearby_nodes.size() > 8) {
       std::nth_element(nearby_nodes.begin(), nearby_nodes.begin() + 15, nearby_nodes.end(),
-        [&](const auto & a, const auto & b) {
+        [&](const auto & a, const auto & b)
+        {
           return distance(map, a->index, new_idx) < distance(map, b->index, new_idx);
-                           });
+                         });
       nearby_nodes.resize(8);
     }
 
-        // choose the best parent among nearby nodes to minimize cost
+      // choose the best parent among nearby nodes to minimize cost
     for (const auto & near_node : nearby_nodes) {
       double cost = traversal_cost(map, near_node->index, new_idx);
       if (!std::isfinite(cost)) {
@@ -290,7 +293,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
 
     tree.push_back(new_node);
 
-        // try to rewire nearby nodes through the new node if it lowers their cost
+      // try to rewire nearby nodes through the new node if it lowers their cost
     for (auto & near_node : nearby_nodes) {
       if (near_node == new_node || near_node == root) {
         continue;
@@ -302,13 +305,13 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
       }
 
       double total = new_node->cost + cost;
-      if (total < near_node->cost - 0.01) {        // small threshold to avoid oscillation
+      if (total < near_node->cost - 0.01) { // small threshold to avoid oscillation
         near_node->cost = total;
         near_node->parent = new_node;
       }
     }
 
-        // check proximity to goal and update best solution if improved
+      // check proximity to goal and update best solution if improved
     double dist_to_goal = distance(map, new_idx, goal_idx);
     if (dist_to_goal < goal_threshold_) {
       double goal_cost = traversal_cost(map, new_idx, goal_idx);
@@ -320,25 +323,25 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
           iterations_without_improvement = 0;
 
           RCLCPP_DEBUG(get_node()->get_logger(),
-                               "New best goal found at iteration %d with cost %.2f (dist: %.2f)",
-                               iter, best_goal_cost, dist_to_goal);
+                         "New best goal found at iteration %d with cost %.2f (dist: %.2f)",
+                         iter, best_goal_cost, dist_to_goal);
 
-                    // adaptive early termination: evaluate path efficiency against direct distance
+            // adaptive early termination: evaluate path efficiency against direct distance
           if (iter > min_iterations && best_goal_node) {
             double direct_distance = distance(map, start_idx, goal_idx);
             double path_efficiency = best_goal_cost / direct_distance;
 
             if (path_efficiency < 1.3 && iter > 2000) {
               RCLCPP_DEBUG(get_node()->get_logger(),
-                                       "Early termination: efficient path found (%.1f%% of direct) at iter %d",
-                                       path_efficiency * 100, iter);
+                             "Early termination: efficient path found (%.1f%% of direct) at iter %d",
+                             path_efficiency * 100, iter);
               break;
             }
 
             if (path_efficiency < 1.1 && iter > 1000) {
               RCLCPP_DEBUG(get_node()->get_logger(),
-                                       "Very efficient path found (%.1f%%), early exit at iter %d",
-                                       path_efficiency * 100, iter);
+                             "Very efficient path found (%.1f%%), early exit at iter %d",
+                             path_efficiency * 100, iter);
               break;
             }
           }
@@ -350,15 +353,19 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
       iterations_without_improvement++;
     }
 
-        // adaptive termination when no improvement for many iterations, scaled by tree size
+      // adaptive termination when no improvement for many iterations, scaled by tree size
     int max_no_improvement_adaptive = max_no_improvement;
-    if (tree.size() > 1000) {max_no_improvement_adaptive = 50;}
-    if (tree.size() > 2000) {max_no_improvement_adaptive = 30;}
+    if (tree.size() > 1000) {
+      max_no_improvement_adaptive = 50;
+    }
+    if (tree.size() > 2000) {
+      max_no_improvement_adaptive = 30;
+    }
 
     if (iterations_without_improvement > max_no_improvement_adaptive && best_goal_node) {
       RCLCPP_DEBUG(get_node()->get_logger(),
-                       "No improvement termination at iteration %d (tree size: %zu)",
-                       iter, tree.size());
+                     "No improvement termination at iteration %d (tree size: %zu)",
+                     iter, tree.size());
       break;
     }
   }
@@ -385,7 +392,6 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
   new_path_cost_ = best_goal_cost;
   return raw_path;
 }
-
 
 grid_map::Index GridMapRRTStarPlanner::biased_random_index(
   const grid_map::GridMap & map,
@@ -427,7 +433,8 @@ std::shared_ptr<RRTNode> GridMapRRTStarPlanner::find_nearest(
 
     // Return the node in 'tree' with minimum Euclidean distance to 'target'
   return *std::min_element(tree.begin(), tree.end(),
-           [&](const auto & a, const auto & b) {
+           [&](const auto & a, const auto & b)
+           {
              return distance(map, a->index, target) < distance(map, b->index, target);
                              });
 }
@@ -444,7 +451,7 @@ double GridMapRRTStarPlanner::distance(
   return std::hypot(pb.x() - pa.x(), pb.y() - pa.y());
 }
 
-// Replace previous implementation: trim path by removing waypoints behind or already passed by the robot
+  // Replace previous implementation: trim path by removing waypoints behind or already passed by the robot
 nav_msgs::msg::Path GridMapRRTStarPlanner::trim_path_from_robot(
   const nav_msgs::msg::Path & path,
   const geometry_msgs::msg::Pose & robot_pose) const
@@ -477,7 +484,7 @@ nav_msgs::msg::Path GridMapRRTStarPlanner::trim_path_from_robot(
     const auto & rp = robot_pose.position;
     double d = std::hypot(wp.x - rp.x, wp.y - rp.y);
     if (d < trim_distance) {
-      start_index = i + 1;       // mark for removal
+      start_index = i + 1;   // mark for removal
     } else {
       break;
     }
@@ -492,8 +499,8 @@ nav_msgs::msg::Path GridMapRRTStarPlanner::trim_path_from_robot(
   if (start_index > 0 && (path.poses.size() - start_index) >= 3) {
     trimmed_path.poses.erase(trimmed_path.poses.begin(), trimmed_path.poses.begin() + start_index);
     RCLCPP_DEBUG(get_node()->get_logger(),
-                     "Path trimmed: removed %zu waypoints, %zu remaining (closest at %.2fm)",
-                     start_index, trimmed_path.poses.size(), min_distance);
+                   "Path trimmed: removed %zu waypoints, %zu remaining (closest at %.2fm)",
+                   start_index, trimmed_path.poses.size(), min_distance);
   }
 
   return trimmed_path;
@@ -527,7 +534,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::extract_path(
     pose.position.y = pos.y();
     pose.position.z = map.at("elevation", node->index);
 
-        // DEFAULT ORIENTATION: neutral (facing along x-axis)
+      // DEFAULT ORIENTATION: neutral (facing along x-axis)
     tf2::Quaternion q;
     q.setRPY(0, 0, 0);
     pose.orientation = tf2::toMsg(q);
@@ -562,7 +569,7 @@ double GridMapRRTStarPlanner::calculate_lateral_distance_to_path(
     const auto & p2 = path.poses[i + 1].pose.position;
     const auto & rp = robot_pose.position;
 
-        // Project robot position onto the vector p1->p2 and clamp to the segment
+      // Project robot position onto the vector p1->p2 and clamp to the segment
     double vx = p2.x - p1.x;
     double vy = p2.y - p1.y;
     double wx = rp.x - p1.x;
@@ -572,7 +579,7 @@ double GridMapRRTStarPlanner::calculate_lateral_distance_to_path(
     double len_sq = vx * vx + vy * vy;
 
     if (len_sq < 1e-6) {
-            // degenerate segment, skip
+        // degenerate segment, skip
       continue;
     }
 
@@ -668,7 +675,6 @@ uint64_t GridMapRRTStarPlanner::edge_key(uint32_t a_flat, uint32_t b_flat)
   return (static_cast<uint64_t>(a_flat) << 32) | b_flat;
 }
 
-
 bool GridMapRRTStarPlanner::check_goal_changed(const geometry_msgs::msg::Pose & goal_pose)
 {
     // tolerance used for comparing goal positions
@@ -680,13 +686,13 @@ bool GridMapRRTStarPlanner::check_goal_changed(const geometry_msgs::msg::Pose & 
     std::abs(goal_pose.position.z - last_goal_pose_.position.z) > tolerance);
 
   if (goal_changed) {
-    last_goal_pose_ = goal_pose;     // update last known goal
+    last_goal_pose_ = goal_pose;   // update last known goal
   }
 
   return goal_changed;
 }
 
-// Replace entire update() function:
+  // Replace entire update() function:
 void GridMapRRTStarPlanner::update(NavState & nav_state)
 {
     // initial validations
@@ -720,12 +726,12 @@ void GridMapRRTStarPlanner::update(NavState & nav_state)
 
     if (robot_deviated) {
       RCLCPP_INFO(get_node()->get_logger(),
-                        "Robot deviated from path (%.2f m > %.2f m threshold), replanning",
-                        lateral_distance, max_lateral_deviation_);
+                    "Robot deviated from path (%.2f m > %.2f m threshold), replanning",
+                    lateral_distance, max_lateral_deviation_);
     } else {
       RCLCPP_DEBUG(get_node()->get_logger(),
-                         "Robot deviation: %.2f m (within %.2f m threshold)",
-                         lateral_distance, max_lateral_deviation_);
+                     "Robot deviation: %.2f m (within %.2f m threshold)",
+                     lateral_distance, max_lateral_deviation_);
     }
   }
 
@@ -742,11 +748,11 @@ void GridMapRRTStarPlanner::update(NavState & nav_state)
       RCLCPP_INFO(get_node()->get_logger(), "Robot deviated, regenerating path");
     } else if (path_too_short) {
       RCLCPP_DEBUG(get_node()->get_logger(),
-                         "Path too short (%zu waypoints), regenerating",
-                         current_path_.poses.size());
+                     "Path too short (%zu waypoints), regenerating",
+                     current_path_.poses.size());
     }
 
-        // reset state for replanning
+      // reset state for replanning
     current_path_.poses.clear();
     clear_cost_cache();
     current_path_cost_ = std::numeric_limits<double>::max();
@@ -772,19 +778,19 @@ void GridMapRRTStarPlanner::update(NavState & nav_state)
       new_path.poses.push_back(ps);
     }
 
-        // accept or compare new path
+      // accept or compare new path
     if (needs_replan) {
       current_path_ = new_path;
       current_path_cost_ = new_path_cost_;
       RCLCPP_DEBUG(get_node()->get_logger(),
-                         "Using new path: cost %.2f, length %.2f m",
-                         new_path_cost_, compute_path_length(new_path));
+                     "Using new path: cost %.2f, length %.2f m",
+                     new_path_cost_, compute_path_length(new_path));
     } else if (current_path_.poses.empty()) {
       current_path_ = new_path;
       current_path_cost_ = new_path_cost_;
       RCLCPP_DEBUG(get_node()->get_logger(),
-                         "Using new path (no previous path): cost %.2f, length %.2f m",
-                         new_path_cost_, compute_path_length(new_path));
+                     "Using new path (no previous path): cost %.2f, length %.2f m",
+                     new_path_cost_, compute_path_length(new_path));
     } else {
       const double improvement_threshold = 5 * goal_threshold_;
 
@@ -796,14 +802,14 @@ void GridMapRRTStarPlanner::update(NavState & nav_state)
         current_path_cost_ = new_path_cost_;
 
         RCLCPP_DEBUG(get_node()->get_logger(),
-                             "Updated to better cost path: %.2f -> %.2f (improvement: %.2f)",
-                             old_cost, new_path_cost_, cost_improvement);
+                       "Updated to better cost path: %.2f -> %.2f (improvement: %.2f)",
+                       old_cost, new_path_cost_, cost_improvement);
       } else {
         double cost_difference = new_path_cost_ - current_path_cost_;
         RCLCPP_DEBUG(get_node()->get_logger(),
-                             "Keeping current path: cost %.2f < %.2f (difference: %.2f, threshold: %.2f)",
-                             current_path_cost_, new_path_cost_, cost_difference,
-            improvement_threshold);
+                       "Keeping current path: cost %.2f < %.2f (difference: %.2f, threshold: %.2f)",
+                       current_path_cost_, new_path_cost_, cost_difference,
+                       improvement_threshold);
       }
     }
   }
@@ -815,8 +821,8 @@ void GridMapRRTStarPlanner::update(NavState & nav_state)
 
     if (current_path_.poses.size() != original_size) {
       RCLCPP_DEBUG(get_node()->get_logger(),
-                         "Path trimmed: %zu -> %zu waypoints",
-                         original_size, current_path_.poses.size());
+                     "Path trimmed: %zu -> %zu waypoints",
+                     original_size, current_path_.poses.size());
     }
   }
 
@@ -871,15 +877,15 @@ void GridMapRRTStarPlanner::publish_path_markers(const nav_msgs::msg::Path & pat
     marker.type = visualization_msgs::msg::Marker::ARROW;
     marker.action = visualization_msgs::msg::Marker::ADD;
 
-        // set marker pose
+      // set marker pose
     marker.pose = pose_stamped.pose;
 
-        // set marker scale
-    marker.scale.x = 0.3;      // arrow length
-    marker.scale.y = 0.05;     // arrow thickness
+      // set marker scale
+    marker.scale.x = 0.3;    // arrow length
+    marker.scale.y = 0.05;   // arrow thickness
     marker.scale.z = 0.05;
 
-        // set marker color
+      // set marker color
     marker.color.r = 0.1f;
     marker.color.g = 0.1f;
     marker.color.b = 1.0f;
@@ -913,7 +919,8 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::smooth_path(
     z_values[i] = input_path[i].position.z;
   }
 
-  auto compute_tangent = [&](size_t idx) -> grid_map::Position {
+  auto compute_tangent = [&](size_t idx) -> grid_map::Position
+    {
       if (idx == 0) {
         return 0.5 * (pts[1] - pts[0]);
       } else if (idx + 1 >= N) {
@@ -927,8 +934,8 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::smooth_path(
   std::vector<double> z_tangents(N);
   for (size_t i = 0; i < N; ++i) {
     tangents[i] = compute_tangent(i);
-    z_tangents[i] = (i == 0) ? 0.5 * (z_values[1] - z_values[0]) :
-      (i + 1 >= N) ? 0.5 * (z_values[N - 1] - z_values[N - 2]) :
+    z_tangents[i] = (i == 0) ? 0.5 * (z_values[1] - z_values[0]) : (i + 1 >=
+      N) ? 0.5 * (z_values[N - 1] - z_values[N - 2]) :
       0.5 * (z_values[i + 1] - z_values[i - 1]);
   }
 
@@ -960,7 +967,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::smooth_path(
       double t = static_cast<double>(s) / (interpolation_points_per_segment + 1);
       double t2 = t * t, t3 = t2 * t;
 
-            // Hermite interpolation
+        // Hermite interpolation
       double h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
       double h10 = t3 - 2.0 * t2 + t;
       double h01 = -2.0 * t3 + 3.0 * t2;
@@ -971,7 +978,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::smooth_path(
       sample.position.y = h00 * p0.y() + h10 * m0.y() + h01 * p1.y() + h11 * m1.y();
       sample.position.z = h00 * z0 + h10 * z_m0 + h01 * z1 + h11 * z_m1;
 
-            // Calculate orientation based on path direction
+        // Calculate orientation based on path direction
       double yaw = 0.0;
       if (!smoothed.empty()) {
         const auto & prev = smoothed.back().position;
@@ -980,21 +987,25 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::smooth_path(
         if (std::hypot(dx, dy) > 1e-6) {
           yaw = std::atan2(dy, dx);
 
-                    // Smooth yaw transitions
+            // Smooth yaw transitions
           tf2::Quaternion prev_q;
           tf2::fromMsg(smoothed.back().orientation, prev_q);
           double pr, pp, prev_yaw;
           tf2::Matrix3x3(prev_q).getRPY(pr, pp, prev_yaw);
 
           double dyaw = yaw - prev_yaw;
-          while (dyaw > M_PI) {dyaw -= 2.0 * M_PI;}
-          while (dyaw < -M_PI) {dyaw += 2.0 * M_PI;}
+          while (dyaw > M_PI) {
+            dyaw -= 2.0 * M_PI;
+          }
+          while (dyaw < -M_PI) {
+            dyaw += 2.0 * M_PI;
+          }
 
           if (std::abs(dyaw) > max_yaw_step) {
             yaw = prev_yaw + (dyaw > 0 ? max_yaw_step : -max_yaw_step);
           }
         } else {
-                    // Keep previous orientation if no significant movement
+            // Keep previous orientation if no significant movement
           tf2::Quaternion prev_q;
           tf2::fromMsg(smoothed.back().orientation, prev_q);
           double pr, pp;
@@ -1006,19 +1017,19 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::smooth_path(
       q.setRPY(0.0, 0.0, yaw);
       sample.orientation = tf2::toMsg(q);
 
-            // Avoid adding points too close
+        // Avoid adding points too close
       const auto & last_pos = smoothed.back().position;
       if (std::hypot(sample.position.x - last_pos.x,
-                           sample.position.y - last_pos.y) >= spacing_)
+                       sample.position.y - last_pos.y) >= spacing_)
       {
         smoothed.push_back(sample);
       }
     }
 
-        // Add the next raw waypoint with corrected orientation
+      // Add the next raw waypoint with corrected orientation
     geometry_msgs::msg::Pose next_pose = input_path[i + 1];
 
-        // Calculate orientation for the waypoint based on path direction
+      // Calculate orientation for the waypoint based on path direction
     if (!smoothed.empty()) {
       const auto & prev = smoothed.back().position;
       double dx = next_pose.position.x - prev.x;
