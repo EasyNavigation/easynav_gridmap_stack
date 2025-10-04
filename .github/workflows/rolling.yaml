@@ -28,19 +28,17 @@ jobs:
       - name: build and test
         uses: ros-tooling/action-ros-ci@0.4.3
         with:
-          package-name: easynav_gridmap_maps_manager
+          package-name: easynav_gridmap_maps_manager easynav_gridmap_astar_planner easynav_gridmap_rrtstar_planner
           target-ros2-distro: rolling
           vcs-repo-file-url: ${GITHUB_WORKSPACE}/.github/thirdparty.repos
-          skip-test: true
           colcon-defaults: |
             {
-              "build": {
-                "packages-up-to": true,
-                  "mixin": ["coverage-gcc"]
+              "test": {
+                "parallel-workers" : 1
               }
             }
+          colcon-mixin-name: coverage-gcc
           colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml
-
       - name: Codecov
         uses: codecov/codecov-action@v5.4.0
         with:
