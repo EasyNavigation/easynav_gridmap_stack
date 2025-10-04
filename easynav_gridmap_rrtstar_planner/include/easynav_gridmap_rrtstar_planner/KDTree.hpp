@@ -41,9 +41,9 @@ struct RRTNode;
  */
 class KDTree {
 private:
-    /**
-     * @brief Internal node of the KD-tree.
-     */
+/**
+ * @brief Internal node of the KD-tree.
+ */
   struct KDNode
   {
     std::shared_ptr<RRTNode> rrt_node;     ///< Associated RRT node
@@ -51,49 +51,51 @@ private:
     std::unique_ptr<KDNode> right;          ///< Right subtree
     int depth;                               ///< Depth of this node in the tree
 
-        /**
-         * @brief KDNode constructor
-         * @param node Pointer to associated RRTNode
-         * @param d Depth in the KD-tree
-         */
+  /**
+   * @brief KDNode constructor
+   * @param node Pointer to associated RRTNode
+   * @param d Depth in the KD-tree
+   */
     KDNode(std::shared_ptr<RRTNode> node, int d)
-    : rrt_node(node), depth(d) {}
+    : rrt_node(node), depth(d)
+    {
+    }
   };
 
   std::unique_ptr<KDNode> root;   ///< Root of the KD-tree
 
-    /**
-     * @brief Recursively builds a balanced KD-tree from a list of nodes.
-     * @param nodes List of RRT nodes to include in the tree
-     * @param depth Current depth (used to determine split axis)
-     * @return Unique pointer to the root KDNode of the subtree
-     */
+/**
+ * @brief Recursively builds a balanced KD-tree from a list of nodes.
+ * @param nodes List of RRT nodes to include in the tree
+ * @param depth Current depth (used to determine split axis)
+ * @return Unique pointer to the root KDNode of the subtree
+ */
   std::unique_ptr<KDNode> build(std::vector<std::shared_ptr<RRTNode>> & nodes, int depth);
 
-    /**
-     * @brief Recursively searches the KD-tree for nodes within a given squared radius.
-     * @param node Current subtree node
-     * @param target Index to search neighbors around
-     * @param radius_sq Squared radius for neighbor search
-     * @param result Vector to store found neighbor nodes
-     */
+/**
+ * @brief Recursively searches the KD-tree for nodes within a given squared radius.
+ * @param node Current subtree node
+ * @param target Index to search neighbors around
+ * @param radius_sq Squared radius for neighbor search
+ * @param result Vector to store found neighbor nodes
+ */
   void search_radius(
     const std::unique_ptr<KDNode> & node, const grid_map::Index & target,
     double radius_sq, std::vector<std::shared_ptr<RRTNode>> & result);
 
 public:
-    /**
-     * @brief Rebuilds the KD-tree from a given set of RRT nodes.
-     * @param nodes Vector of RRT nodes to include
-     */
+/**
+ * @brief Rebuilds the KD-tree from a given set of RRT nodes.
+ * @param nodes Vector of RRT nodes to include
+ */
   void rebuild(std::vector<std::shared_ptr<RRTNode>> & nodes);
 
-    /**
-     * @brief Finds all RRT nodes within a given radius of a target index.
-     * @param index Target index for neighbor search
-     * @param radius Search radius in map units
-     * @return Vector of shared pointers to RRT nodes within the radius
-     */
+/**
+ * @brief Finds all RRT nodes within a given radius of a target index.
+ * @param index Target index for neighbor search
+ * @param radius Search radius in map units
+ * @return Vector of shared pointers to RRT nodes within the radius
+ */
   std::vector<std::shared_ptr<RRTNode>> find_neighbors(
     const grid_map::Index & index,
     double radius);

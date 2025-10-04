@@ -42,26 +42,26 @@ struct RRTNode
   std::shared_ptr<RRTNode> parent = nullptr;         ///< Pointer to parent node in the tree
   double cost = 0.0;                                 ///< Accumulated cost from root
 
-    /// @brief Default constructor
+  /// @brief Default constructor
   RRTNode() = default;
 
-    /**
-     * @brief Construct node with specific index and optional cost
-     * @param idx Grid cell index
-     * @param c Initial cost (default 0.0)
-     */
+  /**
+   * @brief Construct node with specific index and optional cost
+   * @param idx Grid cell index
+   * @param c Initial cost (default 0.0)
+   */
   explicit RRTNode(const grid_map::Index & idx, double c = 0.0)
   : index(idx), cost(c)
   {
   }
 
-    /**
-     * @brief Change parent of this node and update cumulative cost
-     * @param new_parent New parent node
-     * @param new_cost Updated cumulative cost
-     *
-     * Note: children list is not automatically updated for performance reasons.
-     */
+  /**
+   * @brief Change parent of this node and update cumulative cost
+   * @param new_parent New parent node
+   * @param new_cost Updated cumulative cost
+   *
+   * Note: children list is not automatically updated for performance reasons.
+   */
   void change_parent(std::shared_ptr<RRTNode> new_parent, double new_cost)
   {
     parent = new_parent;

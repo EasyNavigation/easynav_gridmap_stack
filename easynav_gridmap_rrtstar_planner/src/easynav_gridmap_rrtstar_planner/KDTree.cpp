@@ -17,7 +17,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
 #include "easynav_gridmap_rrtstar_planner/KDTree.hpp"
 #include <cmath>
 #include <algorithm>
@@ -29,22 +28,25 @@ std::unique_ptr<KDTree::KDNode> KDTree::build(
   std::vector<std::shared_ptr<RRTNode>> & nodes,
   int depth)
 {
-  if (nodes.empty()) {return nullptr;}
+  if (nodes.empty()) {
+    return nullptr;
+  }
 
-    // Determine splitting axis (0 = x, 1 = y)
+  // Determine splitting axis (0 = x, 1 = y)
   int axis = depth % 2;
 
-    // Sort nodes along the current axis
+  // Sort nodes along the current axis
   std::sort(nodes.begin(), nodes.end(),
-    [axis](const std::shared_ptr<RRTNode> & a, const std::shared_ptr<RRTNode> & b) {
+    [axis](const std::shared_ptr<RRTNode> & a, const std::shared_ptr<RRTNode> & b)
+    {
       return axis == 0 ? a->index.x() < b->index.x() : a->index.y() < b->index.y();
-              });
+    });
 
-    // Choose median as root of this subtree
+  // Choose median as root of this subtree
   int median = nodes.size() / 2;
   auto node = std::make_unique<KDNode>(nodes[median], depth);
 
-    // Recursively build left and right subtrees
+  // Recursively build left and right subtrees
   std::vector<std::shared_ptr<RRTNode>> left_nodes(nodes.begin(), nodes.begin() + median);
   std::vector<std::shared_ptr<RRTNode>> right_nodes(nodes.begin() + median + 1, nodes.end());
 
@@ -60,23 +62,25 @@ void KDTree::search_radius(
   double radius_sq,
   std::vector<std::shared_ptr<RRTNode>> & result)
 {
-  if (!node) {return;}
+  if (!node) {
+    return;
+  }
 
-    // Compute squared distance between node and target
+  // Compute squared distance between node and target
   double dx = node->rrt_node->index.x() - target.x();
   double dy = node->rrt_node->index.y() - target.y();
   double dist_sq = dx * dx + dy * dy;
 
-    // If within radius and not the target itself, add to result
+  // If within radius and not the target itself, add to result
   if (dist_sq <= radius_sq && !(node->rrt_node->index == target).all()) {
     result.push_back(node->rrt_node);
   }
 
-    // Determine axis and distance along that axis
+  // Determine axis and distance along that axis
   int axis = node->depth % 2;
   double axis_dist = (axis == 0) ? dx : dy;
 
-    // Recursively search child nodes based on axis distance
+  // Recursively search child nodes based on axis distance
   if (axis_dist <= 0) {
     search_radius(node->left, target, radius_sq, result);
     if (axis_dist * axis_dist <= radius_sq) {
