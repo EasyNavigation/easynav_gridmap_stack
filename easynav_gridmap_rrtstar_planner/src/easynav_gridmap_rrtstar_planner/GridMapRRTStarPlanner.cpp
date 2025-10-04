@@ -198,7 +198,7 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::rrt_star(
   for (int iter = 0; iter < max_iters_; ++iter) {
         // adaptive goal bias: increase bias if a candidate path exists, else grow modestly
     double adaptive_goal_bias = goal_bias_;
-   
+
     if (best_goal_node) {
       adaptive_goal_bias = std::min(0.9, goal_bias_ + 0.15 * (iter / 100.0));
     } else {
@@ -441,7 +441,7 @@ double GridMapRRTStarPlanner::distance(
   map.getPosition(a, pa);
   map.getPosition(b, pb);
 
-  return std::hypot(pb.x() - pa.x(), pb.y() - pa.y()); 
+  return std::hypot(pb.x() - pa.x(), pb.y() - pa.y());
 }
 
 // Replace previous implementation: trim path by removing waypoints behind or already passed by the robot
@@ -1043,9 +1043,9 @@ std::vector<geometry_msgs::msg::Pose> GridMapRRTStarPlanner::smooth_path(
   for (size_t i = start_preserve; i < smoothed.size(); ++i) {
     smoothed[i].orientation = tf2::toMsg(goal_orientation);
   }
-if (!smoothed.empty()) {
+  if (!smoothed.empty()) {
     smoothed.back().orientation = tf2::toMsg(goal_orientation);
-}
+  }
   RCLCPP_DEBUG(get_node()->get_logger(),
                  "Smoothed path: %zu -> %zu points (preserved %zu final orientations)",
                  input_path.size(), smoothed.size(), preserve_n);
