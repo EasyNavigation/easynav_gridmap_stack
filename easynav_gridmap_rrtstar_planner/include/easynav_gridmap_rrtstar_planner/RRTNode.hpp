@@ -40,7 +40,6 @@ struct RRTNode
 {
   grid_map::Index index;                             ///< Grid cell index (x, y)
   std::shared_ptr<RRTNode> parent = nullptr;         ///< Pointer to parent node in the tree
-  std::vector<std::shared_ptr<RRTNode>> children;    ///< Pointers to child nodes
   double cost = 0.0;                                 ///< Accumulated cost from root
 
     /// @brief Default constructor

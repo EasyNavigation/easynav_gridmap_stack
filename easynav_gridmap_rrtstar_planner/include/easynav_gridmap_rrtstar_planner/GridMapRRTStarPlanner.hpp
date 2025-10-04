@@ -22,7 +22,6 @@
 
 #ifndef EASYNAV_GRIDMAP_RRTSTAR_PLANNER__GRIDMAPRRTSTARPLANNER_HPP_
 #define EASYNAV_GRIDMAP_RRTSTAR_PLANNER__GRIDMAPRRTSTARPLANNER_HPP_
-
 #include <cmath>
 #include <limits>
 #include <sstream>
@@ -43,130 +42,142 @@
 #include "easynav_gridmap_rrtstar_planner/RRTNode.hpp"
 #include "tf2/LinearMath/Quaternion.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 namespace easynav
 {
 
 class KDTree;
 
-    /**
-     * @brief RRT* planner implementation using a grid map with elevation support.
-     *
-     * This planner generates collision-free paths that respect slope constraints.
-     * It includes RRT* optimizations, KD-tree acceleration, and path smoothing.
-     */
+/**
+ * @class GridMapRRTStarPlanner
+ * @brief RRT* path planner implementation using elevation grid maps.
+ *
+ * This planner generates collision-free and slope-constrained paths.
+ * Features include:
+ * - RRT* optimization
+ * - KD-tree accelerated nearest neighbor search
+ * - Path smoothing (Catmull-Rom and linear interpolation)
+ * - Visualization markers for debugging and RViz display
+ */
 class GridMapRRTStarPlanner : public PlannerMethodBase
 {
 public:
-        /**
-         * @brief Constructor.
-         * Initializes the KD-tree and sets default parameters.
-         */
+  /**
+   * @brief Constructor. Initializes KD-tree and sets default parameters.
+   */
   GridMapRRTStarPlanner();
 
-        /**
-         * @brief Initializes the planner plugin.
-         * Declares and retrieves parameters from the ROS2 node.
-         * @return std::expected<void, std::string> Empty if successful, error message if failed.
-         */
+  /**
+   * @brief Initializes the planner plugin.
+   *
+   * Declares parameters and sets up internal state.
+   * @return std::expected<void, std::string> Empty if successful, error string otherwise.
+   */
   std::expected<void, std::string> on_initialize() override;
 
-        /**
-         * @brief Main planner update function.
-         * Computes a path from the robot to the goal each cycle.
-         * Publishes the path and visualization markers if there are subscribers.
-         * @param nav_state Navigation state containing robot pose, map, and goals.
-         */
+  /**
+   * @brief Main planner update function.
+   *
+   * Computes a path from the robot to the goal, updates internal state,
+   * and publishes visualization if enabled.
+   *
+   * @param nav_state Navigation state containing robot pose, map, and goals.
+   */
   void update(NavState & nav_state) override;
 
 protected:
-        /**
-         * @brief Runs RRT* algorithm to generate a path from start to goal.
-         * @param map Grid map used for planning.
-         * @param start Start pose in the map frame.
-         * @param goal Goal pose in the map frame.
-         * @return Vector of smoothed poses representing the planned path.
-         * @note Path will be empty if start or goal is outside map bounds.
-         */
+  // ------------------------------------------------------------------
+  // Core RRT* methods
+  // ------------------------------------------------------------------
+
+  /**
+   * @brief Runs the RRT* algorithm to plan a path from start to goal.
+   * @param map Grid map used for planning.
+   * @param start Start pose in map frame.
+   * @param goal Goal pose in map frame.
+   * @return Vector of smoothed poses representing the planned path.
+   *         Empty if start/goal invalid or no path found.
+   */
   std::vector<geometry_msgs::msg::Pose> rrt_star(
     const grid_map::GridMap & map,
     const geometry_msgs::msg::Pose & start,
     const geometry_msgs::msg::Pose & goal);
 
-        /**
-         * @brief Generates a random index inside the map.
-         * @param map Grid map to sample from.
-         * @param rng Random number generator.
-         * @return Random index within map bounds.
-         */
+  /**
+   * @brief Generate a random grid index inside the map bounds.
+   * @param map Grid map to sample from.
+   * @param rng Random number generator.
+   * @return Random index within map bounds.
+   */
   grid_map::Index random_index(const grid_map::GridMap & map, std::mt19937 & rng);
 
-        /**
-         * @brief Steers from one index towards another with a maximum step size.
-         * @param map Grid map used for distance conversion.
-         * @param from Starting index.
-         * @param to Target index.
-         * @return New index reached after stepping, or {-1,-1} if outside map.
-         */
+  /**
+   * @brief Generate a biased random index pointing forward from robot pose.
+   * @param map Grid map.
+   * @param robot_pose Current robot pose.
+   * @param robot_yaw Robot orientation in radians.
+   * @param rng Random generator.
+   * @return Random index biased in forward direction.
+   */
+  grid_map::Index biased_random_index(
+    const grid_map::GridMap & map,
+    const geometry_msgs::msg::Pose & robot_pose,
+    double robot_yaw,
+    std::mt19937 & rng);
+
+  /**
+   * @brief Steer from one index toward another within max step size.
+   * @param map Grid map.
+   * @param from Starting index.
+   * @param to Target index.
+   * @return New index reached after stepping, or {-1,-1} if outside map.
+   */
   grid_map::Index steer(
-    const grid_map::GridMap & map, const grid_map::Index & from,
+    const grid_map::GridMap & map,
+    const grid_map::Index & from,
     const grid_map::Index & to);
 
-        /**
-         * @brief Computes traversal cost between two indices, considering elevation and slope.
-         * @param map Grid map used for cost evaluation.
-         * @param to Destination index.
-         * @param from Source index.
-         * @return Traversal cost. Returns infinity if the path is invalid or slope exceeds max allowed.
-         */
+  /**
+   * @brief Compute traversal cost between two indices.
+   *
+   * Considers elevation changes and slope constraints.
+   *
+   * @param map Grid map.
+   * @param from Source index.
+   * @param to Destination index.
+   * @return Traversal cost, or infinity if slope exceeds max.
+   */
   double traversal_cost(
-    const grid_map::GridMap & map, const grid_map::Index & to,
-    const grid_map::Index & from);
+    const grid_map::GridMap & map,
+    const grid_map::Index & from,
+    const grid_map::Index & to);
 
-        /**
-         * @brief Computes Euclidean distance between two indices.
-         * @param map Grid map used to convert indices to positions.
-         * @param a First index.
-         * @param b Second index.
-         * @return Euclidean distance in meters.
-         */
+  /**
+   * @brief Compute Euclidean distance between two map indices.
+   * @param map Grid map.
+   * @param a First index.
+   * @param b Second index.
+   * @return Distance in meters.
+   */
   double distance(
-    const grid_map::GridMap & map, const grid_map::Index & a,
+    const grid_map::GridMap & map,
+    const grid_map::Index & a,
     const grid_map::Index & b);
 
-        /**
-         * @brief Extracts path poses from a goal node back to the start node.
-         * @param node Goal node of RRT* tree.
-         * @param map Grid map used for position extraction.
-         * @param goal Goal pose for final orientation.
-         * @return Vector of poses representing the path.
-         */
-  std::vector<geometry_msgs::msg::Pose> extract_path(
-    std::shared_ptr<RRTNode> node,
-    const grid_map::GridMap & map,
-    const geometry_msgs::msg::Pose & goal);
-
-        /**
-         * @brief Finds the nearest node in the tree to a target index.
-         * @param tree Vector of RRT nodes.
-         * @param target Index to find nearest node to.
-         * @param map Grid map used to compute distance.
-         * @return Shared pointer to nearest node, or nullptr if tree is empty.
-         */
-  std::shared_ptr<RRTNode> find_nearest(
-    const std::vector<std::shared_ptr<RRTNode>> & tree,
-    const grid_map::Index & target,
-    const grid_map::GridMap & map);
-
-        /**
-         * @brief Generates a biased sample index for RRT* exploration.
-         * @param map Grid map used for sampling.
-         * @param goal_idx Index of the goal.
-         * @param best_goal_node Best goal node found so far (used for path-biased sampling).
-         * @param rng Random number generator.
-         * @param prob_dist Probability distribution for random sampling.
-         * @return Index sampled for RRT* expansion.
-         */
+  /**
+   * @brief Generate a sample index for RRT* expansion.
+   *
+   * Sampling may be goal-biased, path-biased, or uniform random.
+   *
+   * @param map Grid map.
+   * @param goal_idx Goal index.
+   * @param best_goal_node Current best goal node.
+   * @param rng Random generator.
+   * @param prob_dist Probability distribution.
+   * @return Sampled grid index.
+   */
   grid_map::Index generate_sample(
     const grid_map::GridMap & map,
     const grid_map::Index & goal_idx,
@@ -174,46 +185,163 @@ protected:
     std::mt19937 & rng,
     std::uniform_real_distribution<double> & prob_dist);
 
-        /**
-         * @brief Smooths a path using Catmull-Rom splines.
-         * @param input_path Input path to smooth.
-         * @param interpolation_points_per_segment Number of interpolated points per segment.
-         * @return Smoothed path as a vector of poses.
-         * @note Spacing between consecutive points is enforced by `spacing_`.
-         */
+  /**
+   * @brief Find the nearest node in the tree to a target index.
+   * @param tree RRT* tree of nodes.
+   * @param target Target index.
+   * @param map Grid map.
+   * @return Shared pointer to nearest node, or nullptr if empty.
+   */
+  std::shared_ptr<RRTNode> find_nearest(
+    const std::vector<std::shared_ptr<RRTNode>> & tree,
+    const grid_map::Index & target,
+    const grid_map::GridMap & map);
+
+  /**
+   * @brief Backtrack from goal node to extract the full path.
+   * @param goal Goal node in the tree.
+   * @param map Grid map.
+   * @param goal_pose Final goal pose (orientation).
+   * @return Vector of poses representing path.
+   */
+  std::vector<geometry_msgs::msg::Pose> extract_path(
+    std::shared_ptr<RRTNode> goal,
+    const grid_map::GridMap & map,
+    const geometry_msgs::msg::Pose & goal_pose);
+
+  // ------------------------------------------------------------------
+  // Path management and smoothing
+  // ------------------------------------------------------------------
+
+  /**
+   * @brief Merge new path poses with stored path and publish results.
+   * @param new_poses Vector of new poses.
+   * @param frame_id Map frame ID.
+   */
+  void combine_paths(
+    const std::vector<geometry_msgs::msg::Pose> & new_poses,
+    const std::string & frame_id);
+
+  /**
+   * @brief Generate a new path given robot and goal poses.
+   * @param map Grid map.
+   * @param robot_pose Current robot pose.
+   * @param goal_pose Target goal pose.
+   * @return Vector of poses forming a path.
+   */
+  std::vector<geometry_msgs::msg::Pose> generate_new_path(
+    const grid_map::GridMap & map,
+    const geometry_msgs::msg::Pose & robot_pose,
+    const geometry_msgs::msg::Pose & goal_pose);
+
+  /**
+   * @brief Publish path visualization markers for RViz.
+   * @param path Path message.
+   */
+  void publish_path_markers(const nav_msgs::msg::Path & path);
+
+  /**
+   * @brief Smooth path using Catmull-Rom splines.
+   * @param input_path Original path.
+   * @param interpolation_points_per_segment Number of interpolated points.
+   * @return Smoothed path.
+   */
   std::vector<geometry_msgs::msg::Pose> smooth_path(
     const std::vector<geometry_msgs::msg::Pose> & input_path,
     int interpolation_points_per_segment);
 
-        // -----------------------
-        // Planner parameters
-        // -----------------------
-  double max_allowed_slope_deg_ = 50;                    ///< Maximum slope in degrees
-  double max_allowed_slope_ = 50.0 * M_PI / 180.0;       ///< Maximum slope in radians
-  int max_iters_ = 2000;                                 ///< Maximum RRT* iterations
-  double step_size_ = 0.8;                               ///< Maximum step distance (m)
-  double neighbor_radius_ = 1.5;                         ///< RRT* neighbor radius (m)
-  double goal_bias_ = 0.1;                               ///< Probability of sampling the goal
-  double goal_threshold_ = 1.0;                          ///< Distance threshold for goal connection (m)
-  int kdtree_rebuild_interval_ = 200;                    ///< Interval to rebuild KD-tree
-  double spacing_ = 0.2;                                 ///< Minimum spacing for smoothed path points (m)
+  /**
+   * @brief Linearly interpolate between path points.
+   * @param input_path Original path.
+   * @param interpolation_points_per_segment Points per segment.
+   * @return Interpolated path.
+   */
+  std::vector<geometry_msgs::msg::Pose> linear_interpolate_path(
+    const std::vector<geometry_msgs::msg::Pose> & input_path,
+    int interpolation_points_per_segment);
 
-        // -----------------------
-        // Runtime state
-        // -----------------------
-  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;       ///< Path publisher
-  nav_msgs::msg::Path current_path_;                                 ///< Current planned path
-  std::unique_ptr<KDTree> kd_tree_;                                  ///< KD-tree for nearest neighbor search
-  std::unordered_map<uint64_t, double> cost_cache_;                  ///< Cache for traversal costs
-  uint32_t cached_map_width_ = 0;
-  uint32_t cached_map_height_ = 0;
-  uint64_t last_map_timestamp_ = 0;
+  /**
+   * @brief Trim path to start from current robot pose.
+   * @param path Original path.
+   * @param robot_pose Current robot pose.
+   * @return Trimmed path message.
+   */
+  nav_msgs::msg::Path trim_path_from_robot(
+    const nav_msgs::msg::Path & path,
+    const geometry_msgs::msg::Pose & robot_pose) const;
 
-        // -----------------------
-        // Cache utilities
-        // -----------------------
+  /**
+   * @brief Check if the goal has changed significantly since last update.
+   * @param goal_pose New goal pose.
+   * @return True if changed, false otherwise.
+   */
+  bool check_goal_changed(const geometry_msgs::msg::Pose & goal_pose);
+
+  /**
+   * @brief Compute lateral deviation of robot pose from a path.
+   * @param path Path.
+   * @param robot_pose Current pose.
+   * @return Lateral deviation distance.
+   */
+  double calculate_lateral_distance_to_path(
+    const nav_msgs::msg::Path & path,
+    const geometry_msgs::msg::Pose & robot_pose) const;
+
+  // ------------------------------------------------------------------
+  // Parameters
+  // ------------------------------------------------------------------
+  double max_allowed_slope_deg_ = 50;              ///< Maximum slope in degrees
+  double max_allowed_slope_ = 50.0 * M_PI / 180.0; ///< Maximum slope in radians
+  int max_iters_ = 2000;                           ///< Maximum RRT* iterations
+  double step_size_ = 0.8;                         ///< Step size in meters
+  double neighbor_radius_ = 1.5;                   ///< Neighbor radius in meters
+  double goal_bias_ = 0.1;                         ///< Probability of sampling goal
+  double goal_threshold_ = 1.0;                    ///< Goal connection threshold (m)
+  int kdtree_rebuild_interval_ = 200;              ///< KD-tree rebuild interval
+  double spacing_ = 0.2;                           ///< Min spacing for smoothed path points
+  double max_lateral_deviation_ = 1.5;             ///< Allowed lateral deviation (m)
+  int final_poses_with_goal_orientation_ = 2;      ///< Preserve orientation for last poses
+
+  // ------------------------------------------------------------------
+  // Runtime state
+  // ------------------------------------------------------------------
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;       ///< Publisher for path
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_; ///< Publisher for markers
+  nav_msgs::msg::Path current_path_;                                ///< Current stored path
+  std::unique_ptr<KDTree> kd_tree_;                                 ///< KD-tree for NN search
+  std::unordered_map<uint64_t, double> cost_cache_;                 ///< Traversal cost cache
+  uint32_t cached_map_width_ = 0;                                   ///< Cached map width
+  uint32_t cached_map_height_ = 0;                                  ///< Cached map height
+  uint64_t last_map_timestamp_ = 0;                                 ///< Cached map timestamp
+  double last_path_cost_ = 0.0;                                     ///< Cost of previous path
+  double current_path_cost_ = std::numeric_limits<double>::max();    ///< Cost of current path
+  double new_path_cost_ = std::numeric_limits<double>::max();        ///< Cost of new candidate path
+  int kdtree_rebuild_counter_ = 0;                                  ///< Counter for KD-tree rebuilds
+  geometry_msgs::msg::Pose last_goal_pose_;                         ///< Last processed goal pose
+
+  // ------------------------------------------------------------------
+  // Cache utilities
+  // ------------------------------------------------------------------
+
+  /**
+   * @brief Clear traversal cost cache.
+   */
   void clear_cost_cache();
+
+  /**
+   * @brief Compute flat index from 2D index.
+   * @param idx Grid index.
+   * @param width Map width.
+   * @return Flat index.
+   */
   static uint32_t flat_index(const grid_map::Index & idx, uint32_t width);
+
+  /**
+   * @brief Generate unique key for an edge between two nodes.
+   * @param a_flat Flat index of first node.
+   * @param b_flat Flat index of second node.
+   * @return Unique edge key.
+   */
   static uint64_t edge_key(uint32_t a_flat, uint32_t b_flat);
 };
 
