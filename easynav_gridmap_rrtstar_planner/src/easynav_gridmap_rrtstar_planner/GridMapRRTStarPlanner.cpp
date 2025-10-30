@@ -91,7 +91,7 @@ std::expected<void, std::string> GridMapRRTStarPlanner::on_initialize()
   node->declare_parameter<double>(plugin_name + ".spacing", 0.2);
   node->declare_parameter<double>(plugin_name + ".max_lateral_deviation", 0.5);
   node->declare_parameter<int>(plugin_name + ".final_poses_with_goal_orientation", 2);
-
+  
   node->get_parameter(plugin_name + ".max_allowed_slope_deg", max_allowed_slope_deg_);
   node->get_parameter(plugin_name + ".max_iters", max_iters_);
   node->get_parameter(plugin_name + ".step_size", step_size_);
@@ -109,7 +109,7 @@ std::expected<void, std::string> GridMapRRTStarPlanner::on_initialize()
   path_pub_ = node->create_publisher<nav_msgs::msg::Path>("planner/path", 10);
   marker_pub_ = node->create_publisher<visualization_msgs::msg::MarkerArray>("planner/marker", 10);
 
-  node->get_logger().set_level(rclcpp::Logger::Level::Debug);
+  node->get_logger().set_level(rclcpp::Logger::Level::Warn);
 
   last_goal_pose_.position.x = 0.0;
   last_goal_pose_.position.y = 0.0;
@@ -692,7 +692,6 @@ bool GridMapRRTStarPlanner::check_goal_changed(const geometry_msgs::msg::Pose & 
   return goal_changed;
 }
 
-// Replace entire update() function:
 void GridMapRRTStarPlanner::update(NavState & nav_state)
 {
   // initial validations
