@@ -21,17 +21,20 @@ add_library(${PROJECT_NAME} SHARED
   src/easynav_gridmap_rrtstar_planner/GridMapRRTStarPlanner.cpp
   src/easynav_gridmap_rrtstar_planner/KDTree.cpp
 )
+
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+  ${grid_map_ros_INCLUDE_DIRS}  
 )
+
 target_link_libraries(${PROJECT_NAME} PUBLIC
   easynav_common::easynav_common
   easynav_core::easynav_core
   pluginlib::pluginlib
-  grid_map_ros::grid_map_ros
   ${nav_msgs_TARGETS}
   ${grid_map_msgs_TARGETS}
+  ${grid_map_ros_LIBRARIES}
 )
 
 install(

@@ -30,7 +30,7 @@ set(dependencies
   rclcpp_lifecycle::rclcpp_lifecycle
   easynav_common::easynav_common
   easynav_core::easynav_core
-  grid_map_ros::grid_map_ros
+  ${grid_map_ros_LIBRARIES}
   ament_index_cpp::ament_index_cpp
   cv_bridge::cv_bridge
   ${sensor_msgs_TARGETS}
@@ -46,11 +46,14 @@ add_library(${PROJECT_NAME} SHARED
   src/easynav_gridmap_maps_manager/GridmapMapsBuilderNode.cpp
   src/easynav_gridmap_maps_manager/utils.cpp
 )
+
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${yaml-cpp_INCLUDE_DIRS}>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+  ${grid_map_ros_INCLUDE_DIRS}
 )
+
 target_link_libraries(${PROJECT_NAME} PUBLIC ${dependencies})
 
 # Executable
@@ -59,7 +62,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
-target_link_libraries(gridmap_maps_builder_main ${PROJECT_NAME} ${dependencies})
+
+target_link_libraries(gridmap_maps_builder_main ${PROJECT_NAME} ${dependencies} ${grid_map_ros_LIBRARIES})
 
 install(
   DIRECTORY include/
