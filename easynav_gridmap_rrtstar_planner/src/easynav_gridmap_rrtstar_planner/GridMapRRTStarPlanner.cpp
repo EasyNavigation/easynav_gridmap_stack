@@ -91,7 +91,6 @@ std::expected<void, std::string> GridMapRRTStarPlanner::on_initialize()
   node->declare_parameter<double>(plugin_name + ".spacing", 0.2);
   node->declare_parameter<double>(plugin_name + ".max_lateral_deviation", 0.5);
   node->declare_parameter<int>(plugin_name + ".final_poses_with_goal_orientation", 2);
-  
   node->get_parameter(plugin_name + ".max_allowed_slope_deg", max_allowed_slope_deg_);
   node->get_parameter(plugin_name + ".max_iters", max_iters_);
   node->get_parameter(plugin_name + ".step_size", step_size_);
