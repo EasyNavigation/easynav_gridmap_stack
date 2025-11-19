@@ -53,7 +53,7 @@ GridmapMapsBuilderNode::GridmapMapsBuilderNode(const rclcpp::NodeOptions & optio
   }
 
   if (!has_parameter("perception_default_frame")) {
-    declare_parameter("perception_default_frame", "map_");
+    declare_parameter("perception_default_frame", "map");
   }
 
   pub_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
@@ -154,7 +154,7 @@ void GridmapMapsBuilderNode::cycle()
   auto downsampled_points = PointPerceptionsOpsView(point_perceptions)
     .downsample(downsample_resolution_)
     .fuse(perception_default_frame_)
-    ->as_points();
+    .as_points();
 
   if (downsampled_points.empty()) {
     return;
