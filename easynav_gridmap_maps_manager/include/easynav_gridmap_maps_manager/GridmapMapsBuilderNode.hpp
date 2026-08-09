@@ -33,7 +33,8 @@
 
 #include "grid_map_ros/grid_map_ros.hpp"
 
-#include "easynav_common/types/Perceptions.hpp"
+#include "easynav_common/types/NavState.hpp"
+#include "easynav_sensors/types/PointPerception.hpp"
 
 namespace easynav
 {
@@ -100,12 +101,6 @@ public:
    */
   void cycle();
 
-  /**
-   * @brief Registers a perception handler.
-   * @param handler Shared pointer to a PerceptionHandler instance.
-   */
-  void register_handler(std::shared_ptr<PerceptionHandler> handler);
-
   const grid_map::GridMap & get_map() const {return map_;}
   void set_map(const grid_map::GridMap & map) {map_ = map;}
 
@@ -113,8 +108,11 @@ private:
   /// Name of the sensor topic to subscribe to (e.g., point clouds).
   std::string sensor_topic_;
 
-  /// Map of perception data grouped by sensor name.
-  std::map<std::string, std::vector<PerceptionPtr>> perceptions_;
+  /// One PointPerceptionHandler per configured sensor (see on_configure()).
+  std::vector<std::shared_ptr<PointPerceptionHandler>> sensor_handlers_;
+
+  /// NavState used to collect perception data from sensor_handlers_ each cycle.
+  std::shared_ptr<NavState> nav_state_;
 
   /// Callback group for concurrency management of subscriptions and timers.
   rclcpp::CallbackGroup::SharedPtr cbg_;
@@ -127,9 +125,6 @@ private:
 
   /// Publisher for the processed grid map.
   rclcpp_lifecycle::LifecyclePublisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_;
-
-  /// Registered perception handlers by sensor name.
-  std::map<std::string, std::shared_ptr<PerceptionHandler>> handlers_;
 
   grid_map::GridMap map_;
 };

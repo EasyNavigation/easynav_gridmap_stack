@@ -59,9 +59,9 @@ public:
    *
    * Creates necessary publishers/subscribers and initializes the map instances.
    *
-   * @return std::expected<void, std::string> Success or error string.
+   * @throws std::runtime_error on initialization failure.
    */
-  virtual std::expected<void, std::string> on_initialize() override;
+  virtual void on_initialize() override;
 
   /**
    * @brief Updates the internal maps using the current navigation state.

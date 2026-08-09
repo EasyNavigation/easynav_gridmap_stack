@@ -20,8 +20,6 @@
 /// \file
 /// \brief Implementation of the GridmapMapsManager class.
 
-#include <expected>
-
 #include "grid_map_ros/grid_map_ros.hpp"
 
 #include "easynav_gridmap_maps_manager/GridmapMapsManager.hpp"
@@ -54,7 +52,7 @@ GridmapMapsManager::~GridmapMapsManager()
 }
 
 
-std::expected<void, std::string>
+void
 GridmapMapsManager::on_initialize()
 {
   auto node = get_node();
@@ -75,11 +73,11 @@ GridmapMapsManager::on_initialize()
       pkgpath = ament_index_cpp::get_package_share_directory(package_name);
       map_path_ = pkgpath + "/" + map_path_file;
     } catch(ament_index_cpp::PackageNotFoundError & ex) {
-      return std::unexpected("Package " + package_name + " not found. Error: " + ex.what());
+      throw std::runtime_error("Package " + package_name + " not found. Error: " + ex.what());
     }
 
     if (!load_gridmap(map_path_, map_)) {
-      return std::unexpected("File [" + map_path_ + "] not found or read error");
+      throw std::runtime_error("File [" + map_path_ + "] not found or read error");
     }
 
     map_need_update_ = true;
@@ -127,8 +125,6 @@ GridmapMapsManager::on_initialize()
   gridmap_msg_ = *grid_map::GridMapRosConverter::toMessage(map_);
   gridmap_msg_.header.stamp = this->get_node()->now();
   gridmap_pub_->publish(gridmap_msg_);
-
-  return {};
 }
 
 void

@@ -16,6 +16,7 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(easynav_common REQUIRED)
 find_package(easynav_core REQUIRED)
+find_package(easynav_sensors REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -30,7 +31,8 @@ set(dependencies
   rclcpp_lifecycle::rclcpp_lifecycle
   easynav_common::easynav_common
   easynav_core::easynav_core
-  grid_map_ros::grid_map_ros
+  easynav_sensors::easynav_sensors
+  ${grid_map_ros_LIBRARIES}
   ament_index_cpp::ament_index_cpp
   cv_bridge::cv_bridge
   ${sensor_msgs_TARGETS}
@@ -50,6 +52,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${yaml-cpp_INCLUDE_DIRS}>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+  ${grid_map_ros_INCLUDE_DIRS}
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC ${dependencies})
 
@@ -58,6 +61,7 @@ add_executable(gridmap_maps_builder_main src/gridmap_maps_builder_main.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+  ${grid_map_ros_INCLUDE_DIRS}
 )
 target_link_libraries(gridmap_maps_builder_main ${PROJECT_NAME} ${dependencies})
 
@@ -107,6 +111,7 @@ ament_export_dependencies(
   std_srvs
   geometry_msgs
   easynav_common
+  easynav_sensors
   grid_map_ros
   grid_map_msgs
   ament_index_cpp

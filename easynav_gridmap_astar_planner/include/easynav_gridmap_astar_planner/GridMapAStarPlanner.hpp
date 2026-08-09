@@ -26,7 +26,6 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <expected>
 
 #include "rclcpp/rclcpp.hpp"
 #include "nav_msgs/msg/path.hpp"
@@ -51,10 +50,8 @@ public:
    * @brief Initializes the planner.
    *
    * Creates necessary publishers/subscribers and initializes the map instances.
-   *
-   * @return std::expected<void, std::string> Success or error string.
    */
-  virtual std::expected<void, std::string> on_initialize() override;
+  virtual void on_initialize() override;
 
   /// \brief Computes a path using A* algorithm
   /// \param nav_state Current navigation state (with odometry and goals)

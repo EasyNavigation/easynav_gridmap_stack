@@ -114,7 +114,7 @@ GridMapAStarPlanner::GridMapAStarPlanner()
   });
 }
 
-std::expected<void, std::string> GridMapAStarPlanner::on_initialize()
+void GridMapAStarPlanner::on_initialize()
 {
   auto node = get_node();
   const auto & plugin_name = get_plugin_name();
@@ -133,8 +133,6 @@ std::expected<void, std::string> GridMapAStarPlanner::on_initialize()
   path_pub_ = node->create_publisher<nav_msgs::msg::Path>("planner/path", 10);
 
   get_node()->get_logger().set_level(rclcpp::Logger::Level::Debug);
-
-  return {};
 }
 
 void

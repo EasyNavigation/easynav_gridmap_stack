@@ -76,7 +76,7 @@ GridMapRRTStarPlanner::GridMapRRTStarPlanner()
     });
 }
 
-std::expected<void, std::string> GridMapRRTStarPlanner::on_initialize()
+void GridMapRRTStarPlanner::on_initialize()
 {
   auto node = get_node();
   const auto & plugin_name = get_plugin_name();
@@ -118,8 +118,6 @@ std::expected<void, std::string> GridMapRRTStarPlanner::on_initialize()
   last_goal_pose_.orientation.y = 0.0;
   last_goal_pose_.orientation.z = 0.0;
   last_goal_pose_.orientation.w = 1.0;
-
-  return {};
 }
 
 grid_map::Index GridMapRRTStarPlanner::steer(

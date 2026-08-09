@@ -73,9 +73,8 @@ public:
  * @brief Initializes the planner plugin.
  *
  * Declares parameters and sets up internal state.
- * @return std::expected<void, std::string> Empty if successful, error string otherwise.
  */
-  std::expected<void, std::string> on_initialize() override;
+  void on_initialize() override;
 
 /**
  * @brief Main planner update function.
